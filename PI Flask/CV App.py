@@ -9,12 +9,12 @@ import cv2
 import numpy as np
 import threading
 import thread
-global frame, canny_img, bestContour, mdistance, r_ap,r_falg,minute,sec
+global frame, canny_img, bestContour, mdistance, r_ap,r_flag,minute,sec
 ## main
 app = Flask(__name__)
 
 frame = canny_img = bestContour = r_ap = None
-mdistance=r_falg=minute=sec=0
+mdistance=r_flag=minute=sec=0
 lock = thread.allocate_lock()
 WIDTH=320
 HEIGHT=280
@@ -24,12 +24,16 @@ camera.framerate = 40
 camera.brightness = 57
 rawCapture = PiRGBArray(camera, size=(WIDTH*2, HEIGHT*2))
 
-lower_red = np.array([0,100,100])#Red
+lower_red = np.array([0,150,100])#Red
 upper_red = np.array([1,200,200])
-lower_blue = np.array([106,80,80])#blue
-upper_blue = np.array([108,200,200])
-lower_yellow = np.array([26,100,100])#yellow
-upper_yellow = np.array([28,200,200])
+lower_blue = np.array([102,80,100])#blue
+upper_blue = np.array([106,150,200])
+lower_yellow = np.array([25,100,100])#yellow
+upper_yellow = np.array([29,200,200])
+lower_white = np.array([0,0,200])#white
+upper_white = np.array([0,30,255])
+lower_black = np.array([0,0,0])#black
+upper_black = np.array([30,255,130])
 
 def region_of_interest(img, vertices, color3=(255,255,255), color1=255):#ROI
     mask = np.zeros_like(img)
@@ -41,14 +45,16 @@ def region_of_interest(img, vertices, color3=(255,255,255), color1=255):#ROI
     ROI_image = cv2.bitwise_and(img, mask)
     return ROI_image
 
-def rgb_preprocessing(hsv,lower_rgb,upper_rgb):# Trffic light rgb preprocessing
+def rgb_preprocessing(hsv,lower_rgb,upper_rgb,text_flag):# Trffic light rgb preprocessing
     #Create a binary frame, where anything green appears white and everything else is black
     element = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
     #Get rid of background noise using erosion and fill in the holes using dilation and erode the final frame on last time
     mask_rgb = cv2.inRange(hsv, lower_rgb, upper_rgb)
-    mask_rgb = cv2.dilate(mask_rgb,element,iterations=7)
-    mask_rgb = cv2.erode(mask_rgb,element, iterations=7)
-    
+    if text_flag != 1:
+        mask_rgb = cv2.dilate(mask_rgb,element,iterations=7)
+        mask_rgb = cv2.erode(mask_rgb,element, iterations=7)
+    else:
+        mask_rgb = cv2.dilate(mask_rgb,element,iterations=7)
     #Create Contours for all green objects
     contours, _ = cv2.findContours(mask_rgb, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     maximumArea = 0
@@ -64,16 +70,36 @@ def rgb_preprocessing(hsv,lower_rgb,upper_rgb):# Trffic light rgb preprocessing
     x,y,w,h = cv2.boundingRect(local_bestContour)
     return local_bestContour,w*h
 
-def Rendering_Data(local_bestContour,mdistance, canny_img):
-    global frame,r_ap,r_falg
+def Rendering_Data(local_bestContour,mdistance):
+    global frame,canny_img,r_ap,r_flag
     x,y,w,h = cv2.boundingRect(local_bestContour)
     m=w
     if w<h:
         m=h
-    cv2.circle(frame,(x+m/2,y+m/2),m/2+10,(200,200,200),1)
+    cv2.circle(frame,(x+m/2,y+m/2),m/2+15,(200,200,200),1)
     cv2.circle(frame,(x+m/2,y+m/2),m/2+5,(255,200,75),2)
     cv2.circle(frame,(x+m/2,y+m/2),m/2,(200,200,200),1)
+    
+    vertices = np.array([[(x,y), (x,y+m), (x+m,y+m), (x+m,y)]], dtype=np.int32)
+    ROI_image = region_of_interest(frame,vertices)
+    hsv = cv2.cvtColor(ROI_image, cv2.COLOR_BGR2HSV)
 
+    if mdistance=="a":
+        bestContourW,_ = rgb_preprocessing(hsv, lower_white, upper_white,1)
+        if bestContourW !=None:
+            r_flag=1
+            r_ap="   STOP"
+    elif mdistance=="b":
+        bestContourW,_ = rgb_preprocessing(hsv, lower_white, upper_white,1)
+        if bestContourW !=None:
+            r_flag=1
+            r_ap="Cross Walk"
+    elif mdistance=="c":
+        bestContourB,_ = rgb_preprocessing(hsv, lower_white, upper_white,1)
+        if bestContourB !=None:
+            r_flag=1
+            r_ap="Slow Down"
+    '''
     vertices = np.array([[(x-m*0.5,y-m*0.5), (x-m*0.5,y+m*1.5), (x+m*1.5,y+m*1.5), (x+m*1.5,y-m*0.5)]], dtype=np.int32)
     ROI_image = region_of_interest(canny_img,vertices)
     #cv2.imshow("mask4", ROI_image)
@@ -87,26 +113,26 @@ def Rendering_Data(local_bestContour,mdistance, canny_img):
             #print len(approx)
             if len(approx)==8 and mdistance=="a":
                 #cv2.drawContours( frame, [approx], -1, (255 , 50, 0 ), 2 )
-                r_falg=1
+                r_flag=1
                 r_ap="   STOP"
             elif len(approx)==5 and mdistance=="b":
                 #cv2.drawContours( frame1, [approx], -1, (255 , 50, 0 ), 2 )
-                r_falg=1
+                r_flag=1
                 r_ap="Cross Walk"
             elif len(approx)==4 and mdistance=="c":
                 #cv2.drawContours( frame1, [approx], -1, (255 , 50, 0 ), 2 )
-                r_falg=1
+                r_flag=1
                 r_ap="Slow Down"
+    '''
 
 def rgb_detection():
-    global frame, canny_img, bestContour, mdistance
+    global frame, bestContour, mdistance
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     distance={"a":0,"b":0,"c":0,"d":100}
-    bestContour1,distance["a"] = rgb_preprocessing(hsv, lower_red, upper_red)
-    bestContour2,distance["b"] = rgb_preprocessing(hsv, lower_blue, upper_blue)
-    bestContour3,distance["c"] = rgb_preprocessing(hsv, lower_yellow, upper_yellow)
+    bestContour1,distance["a"] = rgb_preprocessing(hsv, lower_red, upper_red,0)
+    bestContour2,distance["b"] = rgb_preprocessing(hsv, lower_blue, upper_blue,0)
+    bestContour3,distance["c"] = rgb_preprocessing(hsv, lower_yellow, upper_yellow,0)
     mdistance = max(distance,key=distance.__getitem__)
-    
     if mdistance == "a":
         bestContour=bestContour1
     elif mdistance == "b":
@@ -116,11 +142,10 @@ def rgb_detection():
     else:
         bestContour=None
     
-
 def draw_object():
-    global frame,canny_img,bestContour,mdistance,r_falg
+    global bestContour,mdistance
     if bestContour !=None:
-        Rendering_Data(bestContour,mdistance , canny_img)
+        Rendering_Data(bestContour,mdistance)
 
 def operation_time():
     global minute,sec
@@ -130,31 +155,32 @@ def operation_time():
             sec=0
             minute=minute+1
         time.sleep(1)
-        
 t0=threading.Thread(target = operation_time)
-t0.start()    
+t0.start()
+
 @app.route('/')
 def index():
     """Video streaming home page."""
     return render_template('index.html')
 
 def gen():
-    global frame, canny_img, bestContour, mdistance,r_ap,r_falg,minute,sec
+    global frame, canny_img, bestContour, mdistance,r_ap,r_flag,minute,sec
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         frame = frame.array
         frame = cv2.resize(frame, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
-        temp = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Èæ¹éÀÌ¹ÌÁö·Î º¯È¯
-        temp = cv2.GaussianBlur(temp,(3,3),0) # Blur È¿°ú    
-        canny_img = cv2.Canny(temp, 20, 210) # Canny edge ¾Ë°í¸®Áò
+        temp = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # í‘ë°±ì´ë¯¸ì§€ë¡œ ë³€í™˜
+        temp = cv2.GaussianBlur(temp,(3,3),0) # Blur íš¨ê³¼    
+        canny_img = cv2.Canny(temp, 20, 210) # Canny edge ì•Œê³ ë¦¬ì¦˜
         t1=threading.Thread(target = rgb_detection)
         t2=threading.Thread(target = draw_object)
         t1.daemon = t2.daemon = True
         t1.start()
         t2.start()
-        if r_falg==1:
+        '''**********Rendering**********'''
+        if r_flag==1:
             cv2.rectangle(frame, (int(WIDTH*0.35),int(HEIGHT*0.7)),(int(WIDTH*0.64),int(HEIGHT*0.75)), (10,10,10), -1)
             cv2.putText(frame, r_ap,(int(WIDTH*0.36),int(HEIGHT*0.74)),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255))
-        r_falg=0
+        r_flag=0
         cv2.putText(frame, "Operation" ,(int(WIDTH*0.05),int(HEIGHT*0.8)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,255,255))
         cv2.putText(frame, str(minute)+":"+str(sec) ,(int(WIDTH*0.20),int(HEIGHT*0.8)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,100,50))
         cv2.putText(frame, "Time",(int(WIDTH*0.09),int(HEIGHT*0.84)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,255,255))
