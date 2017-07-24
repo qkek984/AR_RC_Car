@@ -28,7 +28,7 @@ rawCapture = PiRGBArray(camera, size=(WIDTH*2, HEIGHT*2))
 
 lower_red = np.array([0,150,100])#Red
 upper_red = np.array([3,200,200])
-lower_blue = np.array([102,100,50])#blue
+lower_blue = np.array([102,130,50])#blue
 upper_blue = np.array([108,200,150])
 lower_yellow = np.array([24,150,140])#yellow
 upper_yellow = np.array([28,250,240])
@@ -37,10 +37,15 @@ lower_rwhite = np.array([170,5,150])#red white
 upper_rwhite = np.array([180,50,255])
 
 lower_bwhite = np.array([100,5,130])#blue white
-upper_bwhite = np.array([180,80,210])
+upper_bwhite = np.array([180,100,210])
 
 lower_yblack = np.array([10,170,50])#yellow black
 upper_yblack = np.array([30,250,150])
+
+lower_rlight = np.array([165,50,200])#Red Light
+upper_rlight = np.array([175,220,255])
+lower_glight = np.array([60,200,200])#green Light
+upper_glight = np.array([70,255,255])
 
 def region_of_interest(img, vertices, color3=(255,255,255), color1=255):#ROI
     mask = np.zeros_like(img)
@@ -84,8 +89,13 @@ def Rendering_Data(local_bestContour,mdistance):
     m=w
     if w<h:
         m=h
-    vertices = np.array([[(x,y), (x,y+m), (x+m,y+m), (x+m,y)]], dtype=np.int32)
-    ROI_image = region_of_interest(frame,vertices)
+        
+    if mdistance=="d" or mdistance=="e":
+        vertices = np.array([[(x-m*0.5,y-m*0.5), (x-m*0.5,y+m*1.5), (x+m*1.5,y+m*1.5), (x+m*1.5,y-m*0.5)]], dtype=np.int32)
+        ROI_image = region_of_interest(frame,vertices)
+    else:
+        vertices = np.array([[(x,y), (x,y+m), (x+m,y+m), (x+m,y)]], dtype=np.int32)
+        ROI_image = region_of_interest(frame,vertices)
     hsv = cv2.cvtColor(ROI_image, cv2.COLOR_BGR2HSV)
 
     if mdistance=="a":
@@ -112,6 +122,18 @@ def Rendering_Data(local_bestContour,mdistance):
             lm=m
             r_flag=1
             r_ap="Slow Down"
+    elif mdistance=="d":
+        lx=x
+        ly=y
+        lm=m
+        r_flag=1
+        r_ap="Red Light"
+    elif mdistance=="e":
+        lx=x
+        ly=y
+        lm=m
+        r_flag=1
+        r_ap="Green Light"
     else:
         lx=ly=lm=0
     '''
@@ -148,6 +170,9 @@ def rgb_detection():
     bestContour1,distance["a"] = rgb_preprocessing(hsv, lower_red, upper_red,0)
     bestContour2,distance["b"] = rgb_preprocessing(hsv, lower_blue, upper_blue,0)
     bestContour3,distance["c"] = rgb_preprocessing(hsv, lower_yellow, upper_yellow,0)
+    bestContour4,distance["d"] = rgb_preprocessing(hsv, lower_rlight, upper_rlight,0)
+    bestContour5,distance["e"] = rgb_preprocessing(hsv, lower_glight, upper_glight,0)
+    
     mdistance = max(distance,key=distance.__getitem__)
     if mdistance == "a":
         bestContour=bestContour1
@@ -155,6 +180,10 @@ def rgb_detection():
         bestContour=bestContour2
     elif mdistance == "c":
         bestContour=bestContour3
+    elif mdistance == "d":
+        bestContour=bestContour4
+    elif mdistance == "e":
+        bestContour=bestContour5
     else:
         bestContour=None
         x=y=m=0
@@ -200,10 +229,11 @@ def Rendering():
         if lx > WIDTH/2:
             lxp=50
         cv2.circle(frame,(lx+lm/2,ly+lm/2),lm/2+15,(200,200,200),1)
-        cv2.circle(frame,(lx+lm/2,ly+lm/2),lm/2+5,(255,200,75),2)
+        cv2.circle(frame,(lx+lm/2,ly+lm/2),lm/2+5,(255,178,75),2)
         cv2.circle(frame,(lx+lm/2,ly+lm/2),lm/2,(200,200,200),1)
-        cv2.putText(frame, r_ap,(int(lx-lxp),int(ly+lm+20)),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),3)
-        cv2.putText(frame, r_ap,(int(lx-lxp),int(ly+lm+20)),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,150,75),2)
+        cv2.putText(frame, r_ap,(int(lx-lxp),int(ly+lm+20)),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,125,55),3)
+        cv2.putText(frame, r_ap,(int(lx-lxp),int(ly+lm+20)),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),1)
+        
         
     r_flag=0
     
