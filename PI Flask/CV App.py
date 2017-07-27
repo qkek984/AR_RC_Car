@@ -1,4 +1,4 @@
-#-*- coding: cp949 -*-
+ #-*- coding: cp949 -*-
 #-*- coding: utf-8 -*-
 from flask import Flask, render_template, Response
 from picamera.array import PiRGBArray
@@ -11,11 +11,11 @@ import threading
 import thread
 import serial,time
 
-global frame, canny_img, bestContour, mdistance, r_ap,r_flag,minute,sec
+global frame, bestContour, mdistance, r_ap,r_flag,minute,sec
 global text,tx
 global tspeed,mode
 ## init
-frame = canny_img = bestContour = r_ap = tspeed = None
+frame = bestContour = r_ap = tspeed = None
 mdistance=r_flag=minute=sec=0
 mode=text=""
 tx=0.45
@@ -33,14 +33,14 @@ rawCapture = PiRGBArray(camera, size=(WIDTH*2, HEIGHT*2))
 
 lower_red = np.array([0,130,100])#Red
 upper_red = np.array([4,200,250])
-lower_blue = np.array([100,130,50])#blue
+lower_blue = np.array([100,100,50])#blue
 upper_blue = np.array([108,200,210])
 lower_yellow = np.array([24,140,140])#yellow
 upper_yellow = np.array([30,250,240])
 
 lower_rwhite = np.array([170,5,150])#red white
 upper_rwhite = np.array([180,50,255])
-lower_bwhite = np.array([95,15,200])#blue white
+lower_bwhite = np.array([95,15,150])#blue white
 upper_bwhite = np.array([108,65,255])
 lower_yblack = np.array([10,150,50])#yellow black
 upper_yblack = np.array([30,250,170])
@@ -53,8 +53,7 @@ upper_glight = np.array([70,255,255])
 lower_rrs = np.array([160,100,50])#red road sign
 upper_rrs = np.array([180,150,130])
 
-
-class serials(threading.Thread):
+class serials(threading.Thread):#Arduino Port Connection
     def __init__(self):
         global mode
         threading.Thread.__init__(self)
@@ -65,25 +64,53 @@ class serials(threading.Thread):
         except:
             print "Arduino Port is Disconnected"
             mode=False
-            print "gg"
     def run(self):
         global tspeed,mode
         while True:
             speed=""
             input = self.serialFromArduino.readline()
-            for i in range(0,len(input)):
-                if i != len(input)-2:
+            len_input=len(input)
+            for i in range(0,len_input):
+                if i != len_input-2:
                     speed=speed+str(input[i])
-                elif i != len(input)-1:
+                elif i != len_input-1:
                     mode=str(input[i])
             try:
                 tspeed=int(speed)
             except:
                 pass
-t=serials()
-if mode != False:
-    t.start()
-    
+
+class counting(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.count=4
+    def run(self):
+        global text,tx,mode,frame
+        global minute,sec
+        
+        #while mode != "0":
+        while sec<50:#<---------------Delete in future
+            sec = sec+1
+            time.sleep(0.1)
+        sec=0
+        while text !=None:
+            self.count= self.count-1
+            if text=="Start":
+                text=None
+            elif self.count!=0:
+                text=str(self.count)
+            else :
+                text="Start"
+                tx=0.28
+            time.sleep(1)
+            
+        while True:
+            sec= sec+1
+            if sec==60:
+                sec=0
+                minute=minute+1
+            time.sleep(1)
+
 def region_of_interest(img, vertices, color3=(255,255,255), color1=255):#ROI
     mask = np.zeros_like(img)
     if len(img.shape) > 2:
@@ -134,7 +161,6 @@ def Rendering_Data(bestContour,mdistance):
         ROI_image = region_of_interest(frame,vertices)
         #cv2.imshow("2",ROI_image)
     hsv = cv2.cvtColor(ROI_image, cv2.COLOR_BGR2HSV)
-
     if mdistance=="a":
         _,t = rgb_preprocessing(hsv, lower_rwhite, upper_rwhite,1)
         if t>500:
@@ -145,7 +171,7 @@ def Rendering_Data(bestContour,mdistance):
             r_ap="  STOP  "
     elif mdistance=="b":
         _,t = rgb_preprocessing(hsv, lower_bwhite, upper_bwhite,1)
-        if t>700:
+        if t>500:
             lx=x
             ly=y
             lm=m
@@ -173,33 +199,6 @@ def Rendering_Data(bestContour,mdistance):
         lm=m
         r_flag=1
         r_ap="Green Light"
-    else:
-        lx=ly=lm=0
-    '''
-    vertices = np.array([[(x-m*0.5,y-m*0.5), (x-m*0.5,y+m*1.5), (x+m*1.5,y+m*1.5), (x+m*1.5,y-m*0.5)]], dtype=np.int32)
-    ROI_image = region_of_interest(canny_img,vertices)
-    #cv2.imshow("mask4", ROI_image)
-    contours, _ = cv2.findContours(ROI_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
-    for cnt in contours:
-        if cv2.contourArea( cnt ) > 2000:    
-            approx = cv2.approxPolyDP( cnt, 0.01 * cv2.arcLength(cnt,True), True )
-            #m = cv2.moments(cnt)
-            #x2 = int(m["m10"]/ m["m00"])
-            #y2 = int(m["m01"]/ m["m00"])
-            #print len(approx)
-            if len(approx)==8 and mdistance=="a":
-                #cv2.drawContours( frame, [approx], -1, (255 , 50, 0 ), 2 )
-                r_flag=1
-                r_ap="   STOP"
-            elif len(approx)==5 and mdistance=="b":
-                #cv2.drawContours( frame1, [approx], -1, (255 , 50, 0 ), 2 )
-                r_flag=1
-                r_ap="Cross Walk"
-            elif len(approx)==4 and mdistance=="c":
-                #cv2.drawContours( frame1, [approx], -1, (255 , 50, 0 ), 2 )
-                r_flag=1
-                r_ap="Slow Down"
-    '''
 
 def rgb_detection():
     global frame, mdistance
@@ -223,62 +222,89 @@ def rgb_detection():
         Rendering_Data(bestContour4,mdistance)
     elif mdistance == "e":
         Rendering_Data(bestContour5,mdistance)
-    else:
-        lx=ly=lm=0
-
-class counting(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
-        self.count=4
-    def run(self):
-        global text,tx,mode
-        while mode != "0":
-            time.sleep(0.1)
-        while text !=None:
-            self.count= self.count-1
-            if text=="Start":
-                text=None
-            elif self.count!=0:
-                text=str(self.count)
-            else :
-                text="Start"
-                tx=0.28
-            time.sleep(1)
-            global minute,sec
-        while True:
-            sec= sec+1
-            if sec==60:
-                sec=0
-                minute=minute+1
-            time.sleep(1)
-t0=counting()
-t0.start()
 
 def Rendering():
     global frame, tx,minute,sec,r_flag
     global lx,ly,lm
     global tspeed
     lxp=0
-    if r_flag==1:
+    if r_flag==1 and text==None:
         if lx > WIDTH/2:
             lxp=50
-        cv2.circle(frame,(lx+lm/2,ly+lm/2),lm/2+15,(200,200,200),1)
-        cv2.circle(frame,(lx+lm/2,ly+lm/2),lm/2+5,(255,178,75),2)
-        cv2.circle(frame,(lx+lm/2,ly+lm/2),lm/2,(200,200,200),1)
-        cv2.putText(frame, r_ap,(int(lx-lxp),int(ly+lm+20)),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,125,55),3)
-        cv2.putText(frame, r_ap,(int(lx-lxp),int(ly+lm+20)),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),1)
+        x=lx+lm/2
+        y=ly+lm/2
+        x2=int(lx-lxp)
+        y2=int(ly+lm+20)
+        cv2.circle(frame,(x,y),lm/2+15,(200,200,200),1)
+        cv2.circle(frame,(x,y),lm/2+5,(255,178,75),2)
+        cv2.circle(frame,(x,y),lm/2,(200,200,200),1)
+        cv2.putText(frame, r_ap,(x2,y2),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,125,55),3)
+        cv2.putText(frame, r_ap,(x2,y2),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),1)
     r_flag=0
     if text ==None:
-        cv2.putText(frame, "speed" ,(int(WIDTH*0.2),int(HEIGHT*0.75)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,255,255))
-        cv2.putText(frame, str(tspeed) ,(int(WIDTH*0.35),int(HEIGHT*0.75)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,50,25),1)
-        cv2.putText(frame, "Operation" ,(int(WIDTH*0.2),int(HEIGHT*0.8)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,255,255))
-        cv2.putText(frame, str(minute)+":"+str(sec) ,(int(WIDTH*0.35),int(HEIGHT*0.8)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,50,25),1)
-        cv2.putText(frame, "Time",(int(WIDTH*0.25),int(HEIGHT*0.84)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,255,255))
+        x=int(WIDTH*0.2)
+        y=int(HEIGHT*0.75)
+        cv2.putText(frame, "speed" ,(x,y),cv2.FONT_HERSHEY_SIMPLEX,0.35,(255,255,255))
+        cv2.putText(frame, str(tspeed) ,(int(WIDTH*0.35),y),cv2.FONT_HERSHEY_SIMPLEX,0.35,(255,50,25),1)
+        cv2.putText(frame, "Operation" ,(x,int(HEIGHT*0.8)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,255,255))
+        cv2.putText(frame, str(minute)+":"+str(sec) ,(int(WIDTH*0.35),int(HEIGHT*0.82)),cv2.FONT_HERSHEY_SIMPLEX,0.35,(255,50,25),1)
+        cv2.putText(frame, "Time",(int(WIDTH*0.24),int(HEIGHT*0.84)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,255,255))
+    elif text == "":
+        if sec%4==0:
+            lxp=1
+        else:
+            lxp=2
+            
+        cv2.rectangle(frame, (int(WIDTH*0.15),int(HEIGHT*0.15)),(int(WIDTH*0.85),int(HEIGHT*0.85)), (245,245,245), 3)#Edge
+        cv2.rectangle(frame, (int(WIDTH*0.15),int(HEIGHT*0.15)),(int(WIDTH*0.85),int(HEIGHT*0.85)), (255,100,50), 2)
+            
+        cv2.putText(frame, "Push !",(int(WIDTH*0.43),int(HEIGHT*0.35)),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),lxp*2)
+        cv2.putText(frame, "Push !",(int(WIDTH*0.43),int(HEIGHT*0.35)),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,100,50),2)
+
+        #controller
+        cv2.rectangle(frame, (int(WIDTH*0.3),int(HEIGHT*0.5)),(int(WIDTH*0.32),int(HEIGHT*0.8)), (30,30,160), -1)# L
+        cv2.rectangle(frame, (int(WIDTH*0.32),int(HEIGHT*0.5)),(int(WIDTH*0.33),int(HEIGHT*0.8)), (40,40,180), -1)
+        cv2.rectangle(frame, (int(WIDTH*0.33),int(HEIGHT*0.5)),(int(WIDTH*0.37),int(HEIGHT*0.8)), (50,50,200), -1)
+        cv2.rectangle(frame, (int(WIDTH*0.37),int(HEIGHT*0.5)),(int(WIDTH*0.38),int(HEIGHT*0.8)), (40,40,180), -1)
+        cv2.rectangle(frame, (int(WIDTH*0.38),int(HEIGHT*0.5)),(int(WIDTH*0.4),int(HEIGHT*0.8)), (30,30,160), -1)
+        cv2.rectangle(frame, (int(WIDTH*0.3),int(HEIGHT*0.5)),(int(WIDTH*0.4),int(HEIGHT*0.8)), (0,0,0), 1)
+        cv2.rectangle(frame, (int(WIDTH*0.4),int(HEIGHT*0.55)),(int(WIDTH*0.6),int(HEIGHT*0.7)), (50,50,200), -1)#C
+        cv2.rectangle(frame, (int(WIDTH*0.4),int(HEIGHT*0.55)),(int(WIDTH*0.6),int(HEIGHT*0.7)), (0,0,0), 1)
+        cv2.rectangle(frame, (int(WIDTH*0.4),int(HEIGHT*0.55)),(int(WIDTH*0.6),int(HEIGHT*0.7)), (0,0,0), 1)
+        cv2.rectangle(frame, (int(WIDTH*0.6),int(HEIGHT*0.5)),(int(WIDTH*0.62),int(HEIGHT*0.8)), (30,30,160), -1)# R
+        cv2.rectangle(frame, (int(WIDTH*0.62),int(HEIGHT*0.5)),(int(WIDTH*0.63),int(HEIGHT*0.8)), (40,40,180), -1)
+        cv2.rectangle(frame, (int(WIDTH*0.63),int(HEIGHT*0.5)),(int(WIDTH*0.67),int(HEIGHT*0.8)), (50,50,200), -1)
+        cv2.rectangle(frame, (int(WIDTH*0.68),int(HEIGHT*0.5)),(int(WIDTH*0.7),int(HEIGHT*0.8)), (30,30,180), -1)
+        cv2.rectangle(frame, (int(WIDTH*0.67),int(HEIGHT*0.5)),(int(WIDTH*0.68),int(HEIGHT*0.8)), (40,40,160), -1)        
+        cv2.rectangle(frame, (int(WIDTH*0.6),int(HEIGHT*0.5)),(int(WIDTH*0.7),int(HEIGHT*0.8)), (0,0,0), 1)
+        cv2.circle(frame,(int(WIDTH*0.45),int(HEIGHT*0.65)),10,(0,0,0),-1)#L Button
+        cv2.circle(frame,(int(WIDTH*0.45),int(HEIGHT*0.65)),7,(50,50,50),-1)
+        cv2.circle(frame,(int(WIDTH*0.55),int(HEIGHT*0.65)),10,(0,0,0),-1)#R Button
+        cv2.circle(frame,(int(WIDTH*0.55),int(HEIGHT*0.65)),7,(50,50,50),-1)
+
+        cv2.circle(frame,(int(WIDTH*0.55),int(HEIGHT*0.65)),15,(34,238,238),lxp)
+
+        cv2.line(frame,(int(WIDTH*0.55),int(HEIGHT*0.4)),(int(WIDTH*0.55),int(HEIGHT*0.55)),(255,255,255),lxp*2)
+        cv2.line(frame,(int(WIDTH*0.54),int(HEIGHT*0.5)),(int(WIDTH*0.55),int(HEIGHT*0.55)),(255,255,255),lxp*2)
+        cv2.line(frame,(int(WIDTH*0.56),int(HEIGHT*0.5)),(int(WIDTH*0.55),int(HEIGHT*0.55)),(255,255,255),lxp*2)
+
+        cv2.line(frame,(int(WIDTH*0.55),int(HEIGHT*0.4)),(int(WIDTH*0.55),int(HEIGHT*0.55)),(255,100,50),2)
+        cv2.line(frame,(int(WIDTH*0.54),int(HEIGHT*0.5)),(int(WIDTH*0.55),int(  HEIGHT*0.55)),(255,100,50),2)
+        cv2.line(frame,(int(WIDTH*0.56),int(HEIGHT*0.5)),(int(WIDTH*0.55),int(HEIGHT*0.55)),(255,100,50),2)
     else:
-        cv2.putText(frame, text,(int(WIDTH*tx-5),int(HEIGHT*0.6-5)),cv2.FONT_HERSHEY_SIMPLEX,2,(0,0,0),10)
-        cv2.putText(frame, text,(int(WIDTH*tx),int(HEIGHT*0.6)),cv2.FONT_HERSHEY_SIMPLEX,2,(255,255,255),10)
-        cv2.putText(frame, text,(int(WIDTH*tx),int(HEIGHT*0.6)),cv2.FONT_HERSHEY_SIMPLEX,2,(50,150,250),5)
-        cv2.putText(frame, text,(int(WIDTH*tx),int(HEIGHT*0.6)),cv2.FONT_HERSHEY_SIMPLEX,2,(50,200,250),2)
+        x=int(WIDTH*tx)
+        y=int(HEIGHT*0.6)
+        cv2.putText(frame, text,(x-5,y-5),cv2.FONT_HERSHEY_SIMPLEX,2,(0,0,0),10)
+        cv2.putText(frame, text,(x,y),cv2.FONT_HERSHEY_SIMPLEX,2,(255,255,255),10)
+        cv2.putText(frame, text,(x,y),cv2.FONT_HERSHEY_SIMPLEX,2,(50,150,250),5)
+        cv2.putText(frame, text,(x,y),cv2.FONT_HERSHEY_SIMPLEX,2,(50,200,250),2)
+
+t0=serials()
+if mode != False:
+    t.start()
+
+t1=counting()
+t1.start()
 
 @app.route('/')
 def index():
@@ -290,28 +316,16 @@ def gen():
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         frame = frame.array
         frame = cv2.resize(frame, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
-        #temp = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # 흑백이미지로 변환
-        #temp = cv2.GaussianBlur(temp,(3,3),0) # Blur 효과    
-        #canny_img = cv2.Canny(temp, 20, 210) # Canny edge 알고리즘
-        t1=threading.Thread(target = rgb_detection)
-        t2=threading.Thread(target = Rendering)
-        t1.daemon = t2.daemon = True
-        
-        t1.start()
-
-        '''**********Rendering**********'''
+        t2=threading.Thread(target = rgb_detection)
+        t3=threading.Thread(target = Rendering)
+        t2.daemon = t2.daemon = True
         t2.start()
+        t3.start()
         #Rendering()
         cv2.imwrite('data/f.jpg', frame)
         yield (b'--frame\r\n'
                b'Content-Type: frame/jpeg\r\n\r\n' + open('data/f.jpg', 'rb').read() + b'\r\n')
-        '''
-        cv2.imshow("frame",frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        '''
         rawCapture.truncate(0)
-
         
 @app.route('/video_feed')
 def video_feed():
