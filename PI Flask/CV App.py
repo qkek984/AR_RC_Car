@@ -17,8 +17,9 @@ global tspeed,mode
 global msg1,msg2
 ## init
 frame = bestContour = r_ap = tspeed = None
-mdistance=r_flag=minute=sec=0
-mode=render_text=msg1=msg2=""
+mdistance=r_flag=minute=sec=tspeed=0
+render_text=msg1=msg2=""
+mode=""
 tx=0.45
 
 global time_score, stop_score, line_score, slow_score, red_score, cross_score
@@ -68,13 +69,20 @@ class serials(threading.Thread):#Arduino Port Connection
     def __init__(self):
         global mode
         threading.Thread.__init__(self)
-        port="/dev/ttyACM1"
         try:
+            port="/dev/ttyUSB0"
             self.serialFromArduino = serial.Serial(port,9600)
             self.serialFromArduino.flushInput()
+            input = self.serialFromArduino.readline()
         except:
-            print "Arduino Port is Disconnected"
-            mode=False
+            try:
+                port="/dev/ttyUSB1"
+                self.serialFromArduino = serial.Serial(port,9600)
+                self.serialFromArduino.flushInput()
+                input = self.serialFromArduino.readline()
+            except:
+                print "Arduino Port is Disconnected"
+                mode=False
     def run(self):
         global tspeed,mode
         while True:
@@ -82,9 +90,9 @@ class serials(threading.Thread):#Arduino Port Connection
             input = self.serialFromArduino.readline()
             len_input=len(input)
             for i in range(0,len_input):
-                if i != len_input-2:
+                if i != len_input-3:
                     speed=speed+str(input[i])
-                elif i != len_input-1:
+                elif i != len_input-2:
                     mode=str(input[i])
             try:
                 tspeed=int(speed)
@@ -102,7 +110,7 @@ class Score(threading.Thread):
     def run(self):
         global time_score, time_score, line_score,slow_score,red_score, total_score, cross_score
         global render_text
-        global speed, r_flag
+        global tspeed, r_flag
         global msg1,msg2
         while self.end==False:#STOP
             if r_flag==1:
@@ -125,12 +133,12 @@ class Score(threading.Thread):
                     self.stack=self.stack+1
                     while self.stack>3 and self.stack<7 and slow_score>0:
                         #print "3~5 : ",self.stack
-                        if speed>0:
+                        print tspeed
+                        if tspeed>200:
                             slow_score=0
                             msg1="Slow Score"
                             msg2="-10"
                         self.stack=self.stack+1
-                        time.sleep(1)
                     time.sleep(1)
                 self.stack=0
                 self.check2=1
@@ -139,7 +147,7 @@ class Score(threading.Thread):
                 while r_flag ==3 and red_score>0:
                     print self.stack
                     self.stack=self.stack+1
-                    if self.stack>3 and speed>9:
+                    if self.stack>3 and tspeed>25:
                         red_score=0
                         msg1="Red Score"
                         msg2="-30"
@@ -188,8 +196,8 @@ class Counting(threading.Thread):
         global render_text,tx,mode,frame , time_score
         global minute,sec
         global msg1,msg2
-        #while mode != "0":
-        while sec<50:#<---------------Delete in future
+        #while sec<50:#<---------------Delete in future
+        while mode != "0":
             sec = sec+1
             time.sleep(0.1)
         sec=0
@@ -213,6 +221,9 @@ class Counting(threading.Thread):
                 sec=0
                 minute=minute+1
             if minute==1 and sec>=0 and sec<4:
+                
+                if render_text=="Total Score":
+                    time.sleep(100000)
                 time_score=0
                 msg1="Time Score"
                 msg2="-10"
@@ -544,8 +555,8 @@ def gen():
         t4=Line_Detection()
         t2.daemon = t3.daemon = t4.daemon = True
         t2.start()
-        t3.start()
-        #Rendering()
+        #t3.start()
+        Rendering()
         t4.start()
         cv2.imwrite('data/f.jpg', frame)
         yield (b'--frame\r\n'
