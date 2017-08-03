@@ -1,6 +1,6 @@
  #-*- coding: cp949 -*-
 #-*- coding: utf-8 -*-
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, request
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import io
@@ -10,15 +10,18 @@ import numpy as np
 import threading
 import thread
 import serial,time
+import sqlite3
 
 global frame, bestContour, mdistance, r_ap,r_flag,minute,sec
 global render_text,tx
 global tspeed,mode
 global msg1,msg2
+global nickname,score
+
 ## init
 frame = bestContour = r_ap = tspeed = None
-mdistance=r_flag=minute=sec=tspeed=0
-render_text=msg1=msg2=""
+mdistance=r_flag=minute=sec=tspeed=score=0
+render_text=msg1=msg2=nickname=""
 mode=""
 tx=0.45
 
@@ -98,7 +101,18 @@ class serials(threading.Thread):#Arduino Port Connection
                 tspeed=int(speed)
             except:
                 pass
-
+def sql(nickname,score,minute,sec):
+    conn = sqlite3.connect("data/rank.db")
+    conn.execute('CREATE TABLE IF NOT EXISTS score(name TEXT,score INTEGER, sssssminute INTEGER, sec INTEGER)')
+    cur = conn.cursor()
+    sql_text="INSERT INTO score (name,score,minute,sec) VALUES ('"+nickname+"',"+str(score)+","+str(minute)+","+str(sec)+")"
+    cur.execute(sql_text)
+    cur.execute("SELECT * FROM score ORDER BY score DESC, minute ASC, sec ASC")
+    row= cur.fetchall()
+    print row
+    conn.commit()
+    conn.close()
+    
 class Score(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -107,11 +121,13 @@ class Score(threading.Thread):
         self.check3=0
         self.check4=0
         self.end=False
+        
     def run(self):
         global time_score, time_score, line_score,slow_score,red_score, total_score, cross_score
         global render_text
         global tspeed, r_flag
         global msg1,msg2
+        global nickname,minute,sec
         while self.end==False:#STOP
             if r_flag==1:
                 while r_flag ==1 and self.end==False:
@@ -124,7 +140,9 @@ class Score(threading.Thread):
                         print "total",line_score + time_score + stop_score + slow_score*self.check2 + red_score*self.check3 + cross_score*self.check4
                         total_score = line_score + time_score + stop_score + slow_score*self.check2 + red_score*self.check3 + cross_score*self.check4
                         self.end=True
+                        sql(nickname,total_score,minute,sec)#sqlite write
                         render_text="Total Score"
+                        
                     time.sleep(1)
                 self.stack=0
             elif r_flag==2:#SLow 
@@ -170,12 +188,14 @@ class Line_score(threading.Thread):
         threading.Thread.__init__(self)
         self.Line_Stack=3
     def run(self):
-        global Line_Bit,line_score, msg1, msg2
+        global Line_Bit,line_score, msg1, msg2,render_text
         while line_score>0:
             #print Line_Bit
             if Line_Bit==0:
                 self.Line_Stack=self.Line_Stack-1
                 if self.Line_Stack==0:
+                    if render_text=="Total Score":
+                        time.sleep(100000)
                     line_score=line_score-5
                     self.Line_Stack=3
                     for i in range(0,20):
@@ -196,8 +216,8 @@ class Counting(threading.Thread):
         global render_text,tx,mode,frame , time_score
         global minute,sec
         global msg1,msg2
-        #while sec<50:#<---------------Delete in future
-        while mode != "0":
+        while sec<50:#<---------------Delete in future
+        #while mode != "0":
             sec = sec+1
             time.sleep(0.1)
         sec=0
@@ -537,7 +557,40 @@ def Rendering():
 @app.route('/')
 def index():
     """Video streaming home page."""
-    return render_template('index.html')
+    conn = sqlite3.connect("data/rank.db")
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM score ORDER BY score DESC, minute ASC, sec ASC")
+    except:
+        pass
+    
+    row= cur.fetchall()
+    array=[]
+    for i in range(0,len(row)):
+        for j in range(0,4):
+            if j==0:
+                array.append(str(row[i][j]))
+            elif j==1:
+                array.append(row[i][j])
+            elif j==2:
+                tmp=row[i][j]
+            else:
+                tmp=str(tmp)+":"+str(row[i][j])
+                array.append(tmp)
+    conn.commit()
+    conn.close()
+    return render_template('index.html', array=array)
+
+@app.route('/config')
+def config():
+    global nickname,score
+    nickname = request.args.get('nickname', '')
+    try:
+        score = int(request.args.get('score', ''))
+    except:
+        score=0
+    print nickname
+    print score
 
 def gen():
     t0=serials()
@@ -546,18 +599,18 @@ def gen():
         left=right=0
     t1=Counting()
     t1.start()
-
-    global frame, canny_img, bestContour, mdistance,r_ap,r_flag,minute,sec
+    global frame, canny_img, bestContour, mdistance,r_ap,r_flag,minute,sec,score
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         frame = frame.array
-        t2=threading.Thread(target = rgb_detection)
-        t3=threading.Thread(target = Rendering)
-        t4=Line_Detection()
-        t2.daemon = t3.daemon = t4.daemon = True
-        t2.start()
-        #t3.start()
-        Rendering()
-        t4.start()
+        if score==1:
+            t2=threading.Thread(target = rgb_detection)
+            #t3=threading.Thread(target = Rendering)
+            t4=Line_Detection()
+            t2.daemon  = t4.daemon = True #= t3.daemon
+            t2.start()
+            #t3.start()
+            Rendering()
+            t4.start()
         cv2.imwrite('data/f.jpg', frame)
         yield (b'--frame\r\n'
                b'Content-Type: frame/jpeg\r\n\r\n' + open('data/f.jpg', 'rb').read() + b'\r\n')
