@@ -264,7 +264,7 @@ def region_of_interest2(img, verticesL, verticesR, color3=(255,255,255), color1=
     #cv2.imshow("mask", mask)
     ROI_image = cv2.bitwise_and(img, mask)
     return ROI_image
-def draw_lines(img, lines, color, thickness, h_width, RL): # ì„  ê·¸ë¦¬ê¸°
+def draw_lines(img, lines, color, thickness, h_width, RL): # ¼± ±×¸®±â
     global left, right
     for line in lines:
         for x1,y1,x2,y2 in line:
@@ -274,7 +274,7 @@ def draw_lines(img, lines, color, thickness, h_width, RL): # ì„  ê·¸ë¦¬ê¸°
             elif h_width < x1 and RL==False:
                 right=1
                 #cv2.line(img, (x1, y1), (x2, y2), color, thickness)
-def weighted_img(img, initial_img, a=1, b=1., t=0.): # ë‘ ì´ë¯¸ì§€ operlap í•˜ê¸°
+def weighted_img(img, initial_img, a=1, b=1., t=0.): # µÎ ÀÌ¹ÌÁö operlap ÇÏ±â
     return cv2.addWeighted(initial_img, a, img, b, t)
 
 class Line_Detection(threading.Thread):
@@ -285,28 +285,28 @@ class Line_Detection(threading.Thread):
         self.verticesR = np.array([[(WIDTH/2+WIDTH/3,HEIGHT),(WIDTH/2, HEIGHT/2-HEIGHT/4), (WIDTH/2+WIDTH/3, HEIGHT/2-HEIGHT/4), (WIDTH+WIDTH/3,HEIGHT)]], dtype=np.int32)
     def run(self):
         global frame, Line_Bit, right, left
-        temp = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # í‘ë°±ì´ë¯¸ì§€ë¡œ ë³€í™˜
-        temp = cv2.GaussianBlur(temp,(3,3),0) # Blur íš¨ê³¼    
-        canny_img = cv2.Canny(temp, 250, 400) # Canny edge ì•Œê³ ë¦¬ì¦˜
+        temp = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Èæ¹éÀÌ¹ÌÁö·Î º¯È¯
+        temp = cv2.GaussianBlur(temp,(3,3),0) # Blur È¿°ú    
+        canny_img = cv2.Canny(temp, 250, 400) # Canny edge ¾Ë°í¸®Áò
         ROI_img = region_of_interest2(canny_img, self.verticesL, self.verticesR)
-        line_arr = cv2.HoughLinesP(ROI_img, 1, 1 * np.pi/180, 30,np.array([]), minLineLength=10, maxLineGap=20) # í—ˆí”„ ë³€í™˜
+        line_arr = cv2.HoughLinesP(ROI_img, 1, 1 * np.pi/180, 30,np.array([]), minLineLength=10, maxLineGap=20) # ÇãÇÁ º¯È¯
         line_img = np.zeros((ROI_img.shape[0], ROI_img.shape[1], 3), dtype=np.uint8)
         left=right=0
         try:
             line_arr = np.squeeze(line_arr)
-            # ê¸°ìš¸ê¸° êµ¬í•˜ê¸°
+            # ±â¿ï±â ±¸ÇÏ±â
             slope_degree = (np.arctan2(line_arr[:,1] - line_arr[:,3], line_arr[:,0] - line_arr[:,2]) * 180) / np.pi
-            # ìˆ˜í‰ ê¸°ìš¸ê¸° ì œí•œ
+            # ¼öÆò ±â¿ï±â Á¦ÇÑ
             line_arr = line_arr[np.abs(slope_degree)<160]
             slope_degree = slope_degree[np.abs(slope_degree)<160]
-            # ìˆ˜ì§ ê¸°ìš¸ê¸° ì œí•œ
+            # ¼öÁ÷ ±â¿ï±â Á¦ÇÑ
             line_arr = line_arr[np.abs(slope_degree)>95]
             slope_degree = slope_degree[np.abs(slope_degree)>95]
-            # í•„í„°ë§ëœ ì§ì„  ë²„ë¦¬ê¸°
+            # ÇÊÅÍ¸µµÈ Á÷¼± ¹ö¸®±â
             L_lines, R_lines = line_arr[(slope_degree>0),:], line_arr[(slope_degree<0),:]
             temp = np.zeros((frame.shape[0], frame.shape[1], 3), dtype=np.uint8)
             L_lines, R_lines = L_lines[:,None], R_lines[:,None]
-            # ì§ì„  ê·¸ë¦¬ê¸°
+            # Á÷¼± ±×¸®±â
             
             draw_lines(temp, L_lines, [255, 0, 0], 8, WIDTH/2, True)
             draw_lines(temp, R_lines, [255, 0, 0], 8, WIDTH/2, False)
@@ -314,7 +314,7 @@ class Line_Detection(threading.Thread):
         except:
             #temp= line_img
             left=right=0
-        #frame = weighted_img(temp, frame) # ì›ë³¸ ì´ë¯¸ì§€ì— ê²€ì¶œëœ ì„  overlap
+        #frame = weighted_img(temp, frame) # ¿øº» ÀÌ¹ÌÁö¿¡ °ËÃâµÈ ¼± overlap
 
 ######################### RGB Detection
 def region_of_interest(img, vertices, color3=(255,255,255), color1=255):#ROI
