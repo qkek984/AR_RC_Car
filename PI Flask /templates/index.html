@@ -1,10 +1,91 @@
 <!DOCTYPE html>
 <html>
-<body style="margin: 0px; background: #0e0e0e;">
-<pre>
+<head>
+<style>
+#rank_table{
+	color:white;
+	background-color:black;
+	border:1px solid white;
+}
+#rank_table th{
+	color:yellow;
+	background-color:black
+}
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>
+$(document).ready(function(){
+
+	$("#confirm_btn").click(function(event) {
+	        event.preventDefault();
+		$("#body").attr('style','margin: 0px; background: #0e0e0e;')
+		$("#nickname").attr('style','visibility:hidden;')
+		$("#confirm_btn").attr('style','visibility:hidden;')
+		$("#score_btn").attr('style','visibility:visible;')
+		$("#free_btn").attr('style','visibility:visible;')
+		$("#rank_btn").attr('style','visibility:visible;')
+	});
+	$("#score_btn").click(function(){
+		var formData = $("#config_form").serialize();
+		$.get("/config?" + formData, function(nickname,score) {
+			alert(nickname,score);
+        	});
+		$("#display_div").html("<img align='center' style='-webkit-user-select: none; width:470px; height:470px;'; src='/video_feed';> <img align='center' style='-webkit-user-select: none; width:470px; height:470px;'; src='/video_feed';>");
+
+	 });
+	$("#free_btn").click(function(){
+		$("#score").attr('value','0')
+		var formData = $("#config_form").serialize();
+		$.get("/config?" + formData, function(nickname,score) {
+			alert(nickname,score);
+        	});
+		$("#display_div").html("<img align='center' style='-webkit-user-select: none; width:470px; height:470px;'; src='/video_feed';> <img align='center' style='-webkit-user-select: none; width:470px; height:470px;'; src='/video_feed';>");
+
+	 });
+	$("#rank_btn").click(function(){
+		var regExp = /[\{\}\[\]\/?;|\)*~`!^\-+<>@\#$%&\\\=\(\'\"]/gi
+		var tt = "{{array}}";      
+		tt = tt.replace(regExp, "");
+		tt = tt.split(",");
+		$("#display_div").html("");
+		$("#display_div").append("<table border='1' id='rank_table'>");
+		$("#rank_table").append("<tr><th>Name</th><th>Score</th><th>time</th></tr>");
+		var tex="<tr>"
+		for(var i=1; i<=tt.length; i++){
+			tt[i-1] = tt[i-1].replace(/39/,"").replace(/39$/,'');
+			tex+="<td>"+tt[i-1]+"</td>"
+			if(i%3==0){
+				tex+="</tr>"
+				$("#rank_table").append(tex);
+				tex="<tr>"
+			}
+		}
+		$("#rank_table").append("</table>");
+	 });
+
+});
+</script>
 
 
- <img style="-webkit-user-select: none; width:478px; height:470px;"; src="/video_feed";> <img style="-webkit-user-select: none; width:478px; height:470px;"; src="/video_feed";>
-</pre>
+</head>
+<!--<body style="margin: 0px; background: #0e0e0e;">-->
+
+<body id=body>
+
+<div id="display_div">
+	<form id="config_form">
+		<input type="text" id='nickname' name="nickname" value="">
+		<input type='submit' id='confirm_btn' value='Confirm' name='confirm_btn'>
+		<input type="hidden" id='score' name="score" value="1">
+		<br>
+		<input type='submit' id='score_btn' value='Score Driving' name='score_btn' style='visibility:hidden'>
+		<input type='submit' id='free_btn' value='Free Driving' name='free_btn' style='visibility:hidden'>
+		<input type='submit' id='rank_btn' value='Rank' name='rank_btn' style='visibility:hidden'>
+	</form>
+
+
+</div>
+
+
 </body>
 </html>
