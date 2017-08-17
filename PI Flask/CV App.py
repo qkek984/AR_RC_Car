@@ -17,12 +17,14 @@ global render_text,tx
 global tspeed,mode
 global msg1,msg2
 global nickname,score
+global left,right,Line_Bit
+global speed## delete in future
+speed=9 
 
 ## init
 frame = bestContour = r_ap = tspeed = None
-mdistance=r_flag=minute=sec=tspeed=score=0
-render_text=msg1=msg2=nickname=""
-mode=""
+mdistance=r_flag=minute=sec=tspeed=score=right=left=Line_Bit=0
+render_text=msg1=msg2=nickname=mode=""
 tx=0.45
 
 global time_score, stop_score, line_score, slow_score, red_score, cross_score
@@ -33,8 +35,6 @@ line_score=40
 slow_score=10
 cross_score=10
 
-global speed## delete in future
-speed=9
 
 app = Flask(__name__)
 lock = thread.allocate_lock()
@@ -67,8 +67,8 @@ upper_glight = np.array([70,255,255])
 
 lower_rrs = np.array([160,100,50])#red road sign
 upper_rrs = np.array([180,150,130])
-
-class serials(threading.Thread):#Arduino Port Connection
+'''Serials Class'''
+class Serials(threading.Thread):#Arduino Port Connection
     def __init__(self):
         global mode
         threading.Thread.__init__(self)
@@ -101,18 +101,7 @@ class serials(threading.Thread):#Arduino Port Connection
                 tspeed=int(speed)
             except:
                 pass
-def sql(nickname,score,minute,sec):
-    conn = sqlite3.connect("data/rank.db")
-    conn.execute('CREATE TABLE IF NOT EXISTS score(name TEXT,score INTEGER, sssssminute INTEGER, sec INTEGER)')
-    cur = conn.cursor()
-    sql_text="INSERT INTO score (name,score,minute,sec) VALUES ('"+nickname+"',"+str(score)+","+str(minute)+","+str(sec)+")"
-    cur.execute(sql_text)
-    cur.execute("SELECT * FROM score ORDER BY score DESC, minute ASC, sec ASC")
-    row= cur.fetchall()
-    print row
-    conn.commit()
-    conn.close()
-    
+'''Score Class'''    
 class Score(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -121,7 +110,17 @@ class Score(threading.Thread):
         self.check3=0
         self.check4=0
         self.end=False
-        
+    def sql(self,nickname,score,minute,sec):
+        conn = sqlite3.connect("data/rank.db")
+        conn.execute('CREATE TABLE IF NOT EXISTS score(name TEXT,score INTEGER, minute INTEGER, sec INTEGER)')
+        cur = conn.cursor()
+        sql_text="INSERT INTO score (name,score,minute,sec) VALUES ('"+nickname+"',"+str(score)+","+str(minute)+","+str(sec)+")"
+        cur.execute(sql_text)
+        cur.execute("SELECT * FROM score ORDER BY score DESC, minute ASC, sec ASC")
+        row= cur.fetchall()
+        print row
+        conn.commit()
+        conn.close()
     def run(self):
         global time_score, time_score, line_score,slow_score,red_score, total_score, cross_score
         global render_text
@@ -140,18 +139,14 @@ class Score(threading.Thread):
                         print "total",line_score + time_score + stop_score + slow_score*self.check2 + red_score*self.check3 + cross_score*self.check4
                         total_score = line_score + time_score + stop_score + slow_score*self.check2 + red_score*self.check3 + cross_score*self.check4
                         self.end=True
-                        sql(nickname,total_score,minute,sec)#sqlite write
+                        self.sql(nickname,total_score,minute,sec)#sqlite write
                         render_text="Total Score"
-                        
                     time.sleep(1)
                 self.stack=0
             elif r_flag==2:#SLow 
                 while r_flag ==2 and slow_score>0:
-                    print "start:",self.stack
                     self.stack=self.stack+1
                     while self.stack>3 and self.stack<7 and slow_score>0:
-                        #print "3~5 : ",self.stack
-                        print tspeed
                         if tspeed>200:
                             slow_score=0
                             msg1="Slow Score"
@@ -180,9 +175,7 @@ class Score(threading.Thread):
             time.sleep(1)
             msg1=""
             msg2=""
-
-global left,right,Line_Bit
-right=left=Line_Bit=0
+'''Line score Class'''
 class Line_score(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -207,7 +200,7 @@ class Line_score(threading.Thread):
             time.sleep(1)
             msg1=""
             msg2=""
-
+'''Countion Class'''
 class Counting(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -252,187 +245,184 @@ class Counting(threading.Thread):
                     msg2=""
                 #print "time_score:",time_score
             time.sleep(1)
-######################### Line Detection
-def region_of_interest2(img, verticesL, verticesR, color3=(255,255,255), color1=255):#ROI
-    mask = np.zeros_like(img)
-    if len(img.shape) > 2:
-        color = color3
-    else: 
-        color = color1
-    cv2.fillPoly(mask, verticesL, color)
-    cv2.fillPoly(mask, verticesR, color)
-    #cv2.imshow("mask", mask)
-    ROI_image = cv2.bitwise_and(img, mask)
-    return ROI_image
-def draw_lines(img, lines, color, thickness, h_width, RL): # ¼± ±×¸®±â
-    global left, right
-    for line in lines:
-        for x1,y1,x2,y2 in line:
-            if h_width > x1 and RL==True:
-                left=1
-                #cv2.line(img, (x1, y1), (x2, y2), color, thickness)
-            elif h_width < x1 and RL==False:
-                right=1
-                #cv2.line(img, (x1, y1), (x2, y2), color, thickness)
-def weighted_img(img, initial_img, a=1, b=1., t=0.): # µÎ ÀÌ¹ÌÁö operlap ÇÏ±â
-    return cv2.addWeighted(initial_img, a, img, b, t)
-
+'''Line Detection'''
 class Line_Detection(threading.Thread):
     def __init__(self):
         global WIDTH,HEIGHT
         threading.Thread.__init__(self)
         self.verticesL = np.array([[(-WIDTH/3,HEIGHT),(WIDTH/2-WIDTH/3, HEIGHT/2-HEIGHT/4), (WIDTH/2, HEIGHT/2-HEIGHT/4), (WIDTH/6,HEIGHT)]], dtype=np.int32)
         self.verticesR = np.array([[(WIDTH/2+WIDTH/3,HEIGHT),(WIDTH/2, HEIGHT/2-HEIGHT/4), (WIDTH/2+WIDTH/3, HEIGHT/2-HEIGHT/4), (WIDTH+WIDTH/3,HEIGHT)]], dtype=np.int32)
+    def region_of_interest2(self,img, verticesL, verticesR, color3=(255,255,255), color1=255):#ROI
+        mask = np.zeros_like(img)
+        if len(img.shape) > 2:
+            color = color3
+        else: 
+            color = color1
+        cv2.fillPoly(mask, verticesL, color)
+        cv2.fillPoly(mask, verticesR, color)
+        #cv2.imshow("mask", mask)
+        ROI_image = cv2.bitwise_and(img, mask)
+        return ROI_image
+    def draw_lines(self,img, lines, color, thickness, h_width, RL): # ì„  ê·¸ë¦¬ê¸°
+        global left, right
+        for line in lines:
+            for x1,y1,x2,y2 in line:
+                if h_width > x1 and RL==True:
+                    left=1
+                    cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+                elif h_width < x1 and RL==False:
+                    right=1
+                    cv2.line(img, (x1, y1), (x2, y2), color, thickness)
     def run(self):
         global frame, Line_Bit, right, left
-        temp = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Èæ¹éÀÌ¹ÌÁö·Î º¯È¯
-        temp = cv2.GaussianBlur(temp,(3,3),0) # Blur È¿°ú    
-        canny_img = cv2.Canny(temp, 250, 400) # Canny edge ¾Ë°í¸®Áò
-        ROI_img = region_of_interest2(canny_img, self.verticesL, self.verticesR)
-        line_arr = cv2.HoughLinesP(ROI_img, 1, 1 * np.pi/180, 30,np.array([]), minLineLength=10, maxLineGap=20) # ÇãÇÁ º¯È¯
+        temp = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # í‘ë°±ì´ë¯¸ì§€ë¡œ ë³€í™˜
+        temp = cv2.GaussianBlur(temp,(3,3),0) # Blur íš¨ê³¼    
+        canny_img = cv2.Canny(temp, 250, 400) # Canny edge ì•Œê³ ë¦¬ì¦˜
+        ROI_img = self.region_of_interest2(canny_img, self.verticesL, self.verticesR)
+        line_arr = cv2.HoughLinesP(ROI_img, 1, 1 * np.pi/180, 30,np.array([]), minLineLength=10, maxLineGap=20) # í—ˆí”„ ë³€í™˜
         line_img = np.zeros((ROI_img.shape[0], ROI_img.shape[1], 3), dtype=np.uint8)
         left=right=0
         try:
             line_arr = np.squeeze(line_arr)
-            # ±â¿ï±â ±¸ÇÏ±â
+            # ê¸°ìš¸ê¸° êµ¬í•˜ê¸°
             slope_degree = (np.arctan2(line_arr[:,1] - line_arr[:,3], line_arr[:,0] - line_arr[:,2]) * 180) / np.pi
-            # ¼öÆò ±â¿ï±â Á¦ÇÑ
+            # ìˆ˜í‰ ê¸°ìš¸ê¸° ì œí•œ
             line_arr = line_arr[np.abs(slope_degree)<160]
             slope_degree = slope_degree[np.abs(slope_degree)<160]
-            # ¼öÁ÷ ±â¿ï±â Á¦ÇÑ
+            # ìˆ˜ì§ ê¸°ìš¸ê¸° ì œí•œ
             line_arr = line_arr[np.abs(slope_degree)>95]
             slope_degree = slope_degree[np.abs(slope_degree)>95]
-            # ÇÊÅÍ¸µµÈ Á÷¼± ¹ö¸®±â
+            # í•„í„°ë§ëœ ì§ì„  ë²„ë¦¬ê¸°
             L_lines, R_lines = line_arr[(slope_degree>0),:], line_arr[(slope_degree<0),:]
             temp = np.zeros((frame.shape[0], frame.shape[1], 3), dtype=np.uint8)
             L_lines, R_lines = L_lines[:,None], R_lines[:,None]
-            # Á÷¼± ±×¸®±â
+            # ì§ì„  ê·¸ë¦¬ê¸°
             
-            draw_lines(temp, L_lines, [255, 0, 0], 8, WIDTH/2, True)
-            draw_lines(temp, R_lines, [255, 0, 0], 8, WIDTH/2, False)
+            self.draw_lines(temp, L_lines, [255, 0, 0], 8, WIDTH/2, True)
+            self.draw_lines(temp, R_lines, [255, 0, 0], 8, WIDTH/2, False)
             Line_Bit=right+left
         except:
-            #temp= line_img
+            temp= line_img
             left=right=0
-        #frame = weighted_img(temp, frame) # ¿øº» ÀÌ¹ÌÁö¿¡ °ËÃâµÈ ¼± overlap
+        frame = cv2.addWeighted(frame, 1, temp, 1, 0)
+'''RGB Detection'''
+class Rgb_Detection(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+    def region_of_interest(self,img, vertices, color3=(255,255,255), color1=255):#ROI
+        mask = np.zeros_like(img)
+        if len(img.shape) > 2:
+            color = color3
+        else: 
+            color = color1
+        cv2.fillPoly(mask, vertices, color)
+        ROI_image = cv2.bitwise_and(img, mask)
+        return ROI_image
 
-######################### RGB Detection
-def region_of_interest(img, vertices, color3=(255,255,255), color1=255):#ROI
-    mask = np.zeros_like(img)
-    if len(img.shape) > 2:
-        color = color3
-    else: 
-        color = color1
-    cv2.fillPoly(mask, vertices, color)
-    ROI_image = cv2.bitwise_and(img, mask)
-    return ROI_image
-
-def rgb_preprocessing(hsv,lower_rgb,upper_rgb,render_text_flag):# Trffic light rgb preprocessing
-    #Create a binary frame, where anything green appears white and everything else is black
-    element = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
-    #Get rid of background noise using erosion and fill in the holes using dilation and erode the final frame on last time
-    mask_rgb = cv2.inRange(hsv, lower_rgb, upper_rgb)
-    if render_text_flag != 1:
-        mask_rgb = cv2.dilate(mask_rgb,element,iterations=7)
-        mask_rgb = cv2.erode(mask_rgb,element, iterations=7)
-    else:
-        mask_rgb = cv2.dilate(mask_rgb,element,iterations=7)
+    def rgb_preprocessing(self,hsv,lower_rgb,upper_rgb,render_text_flag):# Trffic light rgb preprocessing
+        #Create a binary frame, where anything green appears white and everything else is black
+        element = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
+        #Get rid of background noise using erosion and fill in the holes using dilation and erode the final frame on last time
+        mask_rgb = cv2.inRange(hsv, lower_rgb, upper_rgb)
+        if render_text_flag != 1:
+            mask_rgb = cv2.dilate(mask_rgb,element,iterations=7)
+            mask_rgb = cv2.erode(mask_rgb,element, iterations=7)
+        else:
+            mask_rgb = cv2.dilate(mask_rgb,element,iterations=7)
+            
+        contours, _ = cv2.findContours(mask_rgb, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        maximumArea = 0
+        bestContour = None
+        for contour in contours:
+            currentArea = cv2.contourArea(contour)
+            if currentArea > maximumArea:
+                bestContour = contour
+                maximumArea = currentArea
+        if bestContour==None:
+            return bestContour,0
+        _,_,w,h = cv2.boundingRect(bestContour)
+        return bestContour,w*h
+    def Rendering_Data(self,bestContour,mdistance):
+        global frame,r_ap,r_flag
+        global lx,ly,lm
+        x,y,w,h = cv2.boundingRect(bestContour)
+        m=w
+        if w<h:
+            m=h
+        if mdistance=="d" or mdistance=="e":
+            vertices = np.array([[(x-m,y-m), (x-m,y+m*2),(x+m*2,y+m*2), (x+m*2,y-m)]], dtype=np.int32)
+            ROI_image = self.region_of_interest(frame,vertices)
+            #cv2.imshow("1",ROI_image)
+        else:
+            vertices = np.array([[(x,y), (x,y+m), (x+m,y+m), (x+m,y)]], dtype=np.int32)
+            ROI_image = self.region_of_interest(frame,vertices)
+            #cv2.imshow("2",ROI_image)
+        hsv = cv2.cvtColor(ROI_image, cv2.COLOR_BGR2HSV)
+        if mdistance=="a":
+            _,t = self.rgb_preprocessing(hsv, lower_rwhite, upper_rwhite,1)
+            if t>500:
+                lx=x
+                ly=y
+                lm=m
+                r_flag=1
+                r_ap="  STOP  "
+        elif mdistance=="b":
+            _,t = self.rgb_preprocessing(hsv, lower_bwhite, upper_bwhite,1)
+            if t>500:
+                lx=x
+                ly=y
+                lm=m
+                r_flag=4
+                r_ap="Cross Walk"
+        elif mdistance=="c":
+            _,t = self.rgb_preprocessing(hsv, lower_yblack, upper_yblack,1)
+            if t>500:
+                lx=x
+                ly=y
+                lm=m
+                r_flag=2
+                r_ap="Slow Down"
+        elif mdistance=="d":
+            _,t = self.rgb_preprocessing(hsv, lower_rrs, upper_rrs,1)
+            if t>2000:
+                lx=x
+                ly=y
+                lm=m
+                r_flag=3
+                r_ap="Red Light"
+        elif mdistance=="e":
+            lx=x
+            ly=y
+            lm=m
+            r_flag=5
+            r_ap="Green Light"
+        else:
+            r_flag=0
+    def run(self):
+        global frame, mdistance,r_flag
+        global lx,ly,lm
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        distance={"a":0,"b":0,"c":0,"d":0,"e":0,"f":100}
+        bestContour1,distance["a"] = self.rgb_preprocessing(hsv, lower_red, upper_red,0)
+        bestContour2,distance["b"] = self.rgb_preprocessing(hsv, lower_blue, upper_blue,0)
+        bestContour3,distance["c"] = self.rgb_preprocessing(hsv, lower_yellow, upper_yellow,0)
+        bestContour4,distance["d"] = self.rgb_preprocessing(hsv, lower_rlight, upper_rlight,0)
+        bestContour5,distance["e"] = self.rgb_preprocessing(hsv, lower_glight, upper_glight,0)
         
-    contours, _ = cv2.findContours(mask_rgb, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    maximumArea = 0
-    bestContour = None
-    for contour in contours:
-        currentArea = cv2.contourArea(contour)
-        if currentArea > maximumArea:
-            bestContour = contour
-            maximumArea = currentArea
-    if bestContour==None:
-        return bestContour,0
-    _,_,w,h = cv2.boundingRect(bestContour)
-    return bestContour,w*h
-
-def Rendering_Data(bestContour,mdistance):
-    global frame,r_ap,r_flag
-    global lx,ly,lm
-    x,y,w,h = cv2.boundingRect(bestContour)
-    m=w
-    if w<h:
-        m=h
-    if mdistance=="d" or mdistance=="e":
-        vertices = np.array([[(x-m,y-m), (x-m,y+m*2),(x+m*2,y+m*2), (x+m*2,y-m)]], dtype=np.int32)
-        ROI_image = region_of_interest(frame,vertices)
-        #cv2.imshow("1",ROI_image)
-    else:
-        vertices = np.array([[(x,y), (x,y+m), (x+m,y+m), (x+m,y)]], dtype=np.int32)
-        ROI_image = region_of_interest(frame,vertices)
-        #cv2.imshow("2",ROI_image)
-    hsv = cv2.cvtColor(ROI_image, cv2.COLOR_BGR2HSV)
-    if mdistance=="a":
-        _,t = rgb_preprocessing(hsv, lower_rwhite, upper_rwhite,1)
-        if t>500:
-            lx=x
-            ly=y
-            lm=m
-            r_flag=1
-            r_ap="  STOP  "
-    elif mdistance=="b":
-        _,t = rgb_preprocessing(hsv, lower_bwhite, upper_bwhite,1)
-        if t>500:
-            lx=x
-            ly=y
-            lm=m
-            r_flag=4
-            r_ap="Cross Walk"
-    elif mdistance=="c":
-        _,t = rgb_preprocessing(hsv, lower_yblack, upper_yblack,1)
-        if t>500:
-            lx=x
-            ly=y
-            lm=m
-            r_flag=2
-            r_ap="Slow Down"
-    elif mdistance=="d":
-        _,t = rgb_preprocessing(hsv, lower_rrs, upper_rrs,1)
-        if t>2000:
-            lx=x
-            ly=y
-            lm=m
-            r_flag=3
-            r_ap="Red Light"
-    elif mdistance=="e":
-        lx=x
-        ly=y
-        lm=m
-        r_flag=5
-        r_ap="Green Light"
-    else:
-        r_flag=0
-
-def rgb_detection():
-    global frame, mdistance,r_flag
-    global lx,ly,lm
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    distance={"a":0,"b":0,"c":0,"d":0,"e":0,"f":100}
-    bestContour1,distance["a"] = rgb_preprocessing(hsv, lower_red, upper_red,0)
-    bestContour2,distance["b"] = rgb_preprocessing(hsv, lower_blue, upper_blue,0)
-    bestContour3,distance["c"] = rgb_preprocessing(hsv, lower_yellow, upper_yellow,0)
-    bestContour4,distance["d"] = rgb_preprocessing(hsv, lower_rlight, upper_rlight,0)
-    bestContour5,distance["e"] = rgb_preprocessing(hsv, lower_glight, upper_glight,0)
-    
-    mdistance = max(distance,key=distance.__getitem__)
-    if mdistance == "a":
-        Rendering_Data(bestContour1,mdistance)
-    elif mdistance == "b":
-        Rendering_Data(bestContour2,mdistance)
-    elif mdistance == "c":
-        Rendering_Data(bestContour3,mdistance)
-    elif mdistance == "d":
-        Rendering_Data(bestContour4,mdistance)
-    elif mdistance == "e":
-        Rendering_Data(bestContour5,mdistance)
-    else:
-        r_flag=0
-
+        mdistance = max(distance,key=distance.__getitem__)
+        if mdistance == "a":
+            self.Rendering_Data(bestContour1,mdistance)
+        elif mdistance == "b":
+            self.Rendering_Data(bestContour2,mdistance)
+        elif mdistance == "c":
+            self.Rendering_Data(bestContour3,mdistance)
+        elif mdistance == "d":
+            self.Rendering_Data(bestContour4,mdistance)
+        elif mdistance == "e":
+            self.Rendering_Data(bestContour5,mdistance)
+        else:
+            r_flag=0
+'''Rendering Method'''
 def Rendering():
     global frame, tx,minute,sec,r_flag
     global lx,ly,lm
@@ -521,7 +511,6 @@ def Rendering():
         cv2.putText(frame, str(total_score),(int(WIDTH*0.4+lxp)-5,int(HEIGHT*0.45)-5),cv2.FONT_HERSHEY_SIMPLEX,2,(0,0,0),10)#score
         cv2.putText(frame, str(total_score),(int(WIDTH*0.4+lxp),int(HEIGHT*0.45)),cv2.FONT_HERSHEY_SIMPLEX,2,(252,128,0),5)
         cv2.putText(frame, str(total_score),(int(WIDTH*0.4+lxp),int(HEIGHT*0.45)),cv2.FONT_HERSHEY_SIMPLEX,2,(255,187,0),2)
-        
 
         cv2.line(frame,(int(WIDTH*0.2),int(HEIGHT*0.48)),(int(WIDTH*0.8),int(HEIGHT*0.48)),(50,50,255),1)
 
@@ -543,7 +532,6 @@ def Rendering():
         cv2.putText(frame, str(cross_score) ,(int(WIDTH*0.6),int(HEIGHT*0.7)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,50,0),1)
         cv2.putText(frame, str(time_score) ,(int(WIDTH*0.6),int(HEIGHT*0.75)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,50,0),1)
         cv2.putText(frame, str(stop_score) ,(int(WIDTH*0.6),int(HEIGHT*0.8)),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,50,0),1)
-
     else:# Start to count
         x=int(WIDTH*tx)
         y=int(HEIGHT*0.6)
@@ -552,8 +540,6 @@ def Rendering():
         cv2.putText(frame, render_text,(x,y),cv2.FONT_HERSHEY_SIMPLEX,2,(50,150,250),5)
         cv2.putText(frame, render_text,(x,y),cv2.FONT_HERSHEY_SIMPLEX,2,(50,200,250),2)
         
-
-
 @app.route('/')
 def index():
     """Video streaming home page."""
@@ -563,7 +549,6 @@ def index():
         cur.execute("SELECT * FROM score ORDER BY score DESC, minute ASC, sec ASC")
     except:
         pass
-    
     row= cur.fetchall()
     array=[]
     for i in range(0,len(row)):
@@ -593,7 +578,8 @@ def config():
     print score
 
 def gen():
-    t0=serials()
+    MID = cv2.getRotationMatrix2D((WIDTH/2,HEIGHT/2),180,1)
+    t0=Serials()
     if mode != False:
         t0.start()
         left=right=0
@@ -602,15 +588,16 @@ def gen():
     global frame, canny_img, bestContour, mdistance,r_ap,r_flag,minute,sec,score
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         frame = frame.array
+        frame = cv2.warpAffine(frame,MID,(WIDTH,HEIGHT))# 180 rotation
         if score==1:
-            t2=threading.Thread(target = rgb_detection)
-            #t3=threading.Thread(target = Rendering)
-            t4=Line_Detection()
-            t2.daemon  = t4.daemon = True #= t3.daemon
+            t2=Rgb_Detection()
+            t3=Line_Detection()
+            #t4=threading.Thread(target = Rendering)
+            t2.daemon  = t3.daemon = True #= t4.daemon
             t2.start()
-            #t3.start()
+            t3.start()
+            #t4.start()
             Rendering()
-            t4.start()
         cv2.imwrite('data/f.jpg', frame)
         yield (b'--frame\r\n'
                b'Content-Type: frame/jpeg\r\n\r\n' + open('data/f.jpg', 'rb').read() + b'\r\n')
@@ -624,4 +611,3 @@ def video_feed():
 
 if __name__ == '__main__':
         app.run(host='0.0.0.0', port=5001, threaded=True)
-
