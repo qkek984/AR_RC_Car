@@ -1,4 +1,4 @@
- #-*- coding: cp949 -*-
+#-*- coding: cp949 -*-
 #-*- coding: utf-8 -*-
 from flask import Flask, render_template, Response, request
 from picamera.array import PiRGBArray
@@ -101,7 +101,6 @@ class Serials(threading.Thread):#Arduino Port Connection
                 tspeed=int(speed)
             except:
                 pass
-'''Score Class'''    
 class Score(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -245,6 +244,7 @@ class Counting(threading.Thread):
                     msg2=""
                 #print "time_score:",time_score
             time.sleep(1)
+
 '''Line Detection'''
 class Line_Detection(threading.Thread):
     def __init__(self):
@@ -540,10 +540,11 @@ def Rendering():
         cv2.putText(frame, render_text,(x,y),cv2.FONT_HERSHEY_SIMPLEX,2,(50,150,250),5)
         cv2.putText(frame, render_text,(x,y),cv2.FONT_HERSHEY_SIMPLEX,2,(50,200,250),2)
         
+
 @app.route('/')
 def index():
-    """Video streaming home page."""
     conn = sqlite3.connect("data/rank.db")
+    conn.execute('CREATE TABLE IF NOT EXISTS score(name TEXT,score INTEGER, minute INTEGER, sec INTEGER)')
     cur = conn.cursor()
     try:
         cur.execute("SELECT * FROM score ORDER BY score DESC, minute ASC, sec ASC")
@@ -564,6 +565,7 @@ def index():
                 array.append(tmp)
     conn.commit()
     conn.close()
+    """Video streaming home page."""
     return render_template('index.html', array=array)
 
 @app.route('/config')
@@ -576,7 +578,7 @@ def config():
         score=0
     print nickname
     print score
-
+    
 def gen():
     MID = cv2.getRotationMatrix2D((WIDTH/2,HEIGHT/2),180,1)
     t0=Serials()
