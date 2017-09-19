@@ -41,12 +41,12 @@
 							$.get("/config?" + formData, function(nickname,score) {
 								alert(nickname,score);
         						});
-							$("#body").attr('style','background:#BDBDBD;');
+							$("#body").attr('style','background:#000000;');
 							$("#menu").attr('style','display:none');
 							$("#play").attr('style','display:');
-							$("#back").attr('style','display:');
-							$("#play").attr('style','margin-top:5%');
-							$("#play").html("<img align='center' style='-webkit-user-select: none; width:49%; height:80%; z-index:9;'; src='/video_feed';>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img align='center' style='-webkit-user-select: none; width:49%; height:80%;  z-index:9;'; src='/video_feed';>");
+							$("#back2").attr('style','display:');
+							$("#play").attr('style','margin-top:4%');
+							$("#play").html("<img align='center' style='-webkit-user-select: none; width:50%; height:85%; z-index:9;'; src='/video_feed';><img align='center' style='-webkit-user-select: none; width:50%; height:85%;  z-index:9;'; src='/video_feed';>");
 							
 							});
 						$("#freemode").click(function(){
@@ -56,12 +56,12 @@
 							$.get("/config?" + formData, function(nickname,score) {
 								alert(nickname,score);
 					        	});
-							$("#body").attr('style','background:#BDBDBD;');
+							$("#body").attr('style','background:#000000;');
 							$("#menu").attr('style','display:none');
 							$("#play").attr('style','display:');
-							$("#back").attr('style','display:');
-							$("#play").attr('style','margin-top:5%');
-							$("#play").html("<img align='center' style='-webkit-user-select: none; width:49%; height:80%; z-index:9;'; src='/video_feed';>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img align='center' style='-webkit-user-select: none; width:49%; height:80%;  z-index:9;'; src='/video_feed';>");
+							$("#back2").attr('style','display:');
+							$("#play").attr('style','margin-top:4%');
+							$("#play").html("<img align='center' style='-webkit-user-select: none; width:50%; height:85%; z-index:9;'; src='/video_feed';><img align='center' style='-webkit-user-select: none; width:50%; height:85%;  z-index:9;'; src='/video_feed';>");
 							
 							});
 						$("#rank").click(function(){
@@ -116,6 +116,12 @@
 							$("#credit").attr('style','display:none');	
 							$("#ranking").attr('style','display:none');	
 						});
+						$("#back2").click(function(){
+							$("#body").attr('style','background='+'{{url_for('static', filename='test2.jpg')}}');
+							$("#back2").attr('style','display:none');
+							$("#menu").attr('style','display:');
+							$("#play").attr('style','display:none');		
+						});
 					});
 		</script>
 		<link rel=stylesheet type=text/css href="https://www.w3schools.com/w3css/4/w3.css"/>
@@ -132,6 +138,9 @@
 	<body id="body" background="{{url_for('static', filename='test2.jpg')}}" >
 				<div id="back" style="position:absolute;top:1%;left:1%; z-index:10;  display:none;">
 					<img id="back" src="{{url_for('static', filename='back_btn.png')}}" height="5%" style="position:absolute;top:1%;left:1%;z-index:10;"/>
+				</div>
+				<div id="back2" style="position:absolute;top:1%;left:1%; z-index:10;  display:none;">
+					<img id="back" src="{{url_for('static', filename='back_btn2.png')}}" height="5%" style="position:absolute;top:1%;left:1%;z-index:10;"/>
 				</div>
 				<table id="guide" width="100%" height="100%"  border ="0" align="center" style="position:absolute; top:0%; display:none;">
 					<tr>
