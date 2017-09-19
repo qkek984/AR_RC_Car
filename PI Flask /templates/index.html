@@ -1,91 +1,240 @@
-<!DOCTYPE html>
+<!DOCTYPE heml>
 <html>
-<head>
-<style>
-#rank_table{
-	color:white;
-	background-color:black;
-	border:1px solid white;
-}
-#rank_table th{
-	color:yellow;
-	background-color:black
-}
-</style>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-<script>
-$(document).ready(function(){
-
-	$("#confirm_btn").click(function(event) {
-	        event.preventDefault();
-		$("#body").attr('style','margin: 0px; background: #0e0e0e;')
-		$("#nickname").attr('style','visibility:hidden;')
-		$("#confirm_btn").attr('style','visibility:hidden;')
-		$("#score_btn").attr('style','visibility:visible;')
-		$("#free_btn").attr('style','visibility:visible;')
-		$("#rank_btn").attr('style','visibility:visible;')
-	});
-	$("#score_btn").click(function(){
-		var formData = $("#config_form").serialize();
-		$.get("/config?" + formData, function(nickname,score) {
-			alert(nickname,score);
-        	});
-		$("#display_div").html("<img align='center' style='-webkit-user-select: none; width:470px; height:470px;'; src='/video_feed';> <img align='center' style='-webkit-user-select: none; width:470px; height:470px;'; src='/video_feed';>");
-
-	 });
-	$("#free_btn").click(function(){
-		$("#score").attr('value','0')
-		var formData = $("#config_form").serialize();
-		$.get("/config?" + formData, function(nickname,score) {
-			alert(nickname,score);
-        	});
-		$("#display_div").html("<img align='center' style='-webkit-user-select: none; width:470px; height:470px;'; src='/video_feed';> <img align='center' style='-webkit-user-select: none; width:470px; height:470px;'; src='/video_feed';>");
-
-	 });
-	$("#rank_btn").click(function(){
-		var regExp = /[\{\}\[\]\/?;|\)*~`!^\-+<>@\#$%&\\\=\(\'\"]/gi
-		var tt = "{{array}}";      
-		tt = tt.replace(regExp, "");
-		tt = tt.split(",");
-		$("#display_div").html("");
-		$("#display_div").append("<table border='1' id='rank_table'>");
-		$("#rank_table").append("<tr><th>Name</th><th>Score</th><th>time</th></tr>");
-		var tex="<tr>"
-		for(var i=1; i<=tt.length; i++){
-			tt[i-1] = tt[i-1].replace(/39/,"").replace(/39$/,'');
-			tex+="<td>"+tt[i-1]+"</td>"
-			if(i%3==0){
-				tex+="</tr>"
-				$("#rank_table").append(tex);
-				tex="<tr>"
+	<head>
+		<META name = "viewport" content = "width=device-width, initial-scale=1.0">
+		<style>
+		
+		</style>
+		<script>
+			var slideIndex = 1;
+			showDivs(slideIndex);
+			
+			function plusDivs(n) {
+				showDivs(slideIndex += n);
+				}
+			function showDivs(n) {
+				var i;
+				var x = document.getElementsByClassName("mySlides");
+				if ( n > x.length) {slideIndex = 1}
+				if ( n < 1) {slideIndex = x.length}
+				for(i=0; i < x.length; i++ ){
+						x[i].style.display = "none";	
+				}
+				x[slideIndex-1].style.display = "block";
+	
 			}
-		}
-		$("#rank_table").append("</table>");
-	 });
+		</script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+		<script>
+			$(document).ready(function(){
 
-});
-</script>
+						$("#connect").click(function(event){
+							event.preventDefault();
+							$("#join").attr('style', 'display:none;');
+							$("#menu").attr('style', 'display:');
+							$("#back").attr('style', 'display:none');
+							$("#user").html("Welcom, "+$("#nickname").val());
+						});
+						
+						$("#scoremode").click(function(){
+							var formData = $("#join").serialize();
+							$.get("/config?" + formData, function(nickname,score) {
+								alert(nickname,score);
+        						});
+							$("#body").attr('style','background:#BDBDBD;');
+							$("#menu").attr('style','display:none');
+							$("#play").attr('style','display:');
+							$("#back").attr('style','display:');
+							$("#play").attr('style','margin-top:5%');
+							$("#play").html("<img align='center' style='-webkit-user-select: none; width:49%; height:80%; z-index:9;'; src='/video_feed';>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img align='center' style='-webkit-user-select: none; width:49%; height:80%;  z-index:9;'; src='/video_feed';>");
+							
+							});
+						$("#freemode").click(function(){
+							event.preventDefault();
+							$("#score").attr('value','0')
+							var formData = $("#join").serialize();
+							$.get("/config?" + formData, function(nickname,score) {
+								alert(nickname,score);
+					        	});
+							$("#body").attr('style','background:#BDBDBD;');
+							$("#menu").attr('style','display:none');
+							$("#play").attr('style','display:');
+							$("#back").attr('style','display:');
+							$("#play").attr('style','margin-top:5%');
+							$("#play").html("<img align='center' style='-webkit-user-select: none; width:49%; height:80%; z-index:9;'; src='/video_feed';>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img align='center' style='-webkit-user-select: none; width:49%; height:80%;  z-index:9;'; src='/video_feed';>");
+							
+							});
+						$("#rank").click(function(){
+							$("#back").attr('style','display:');
+							$("#menu").attr('style','display:none');
+							$("#ranking").attr('style','display:');
+							var regExp = /[\{\}\[\]\/?;|\)*~`!^\-+<>@\#$%&\\\=\(\'\"]/gi;
+							var rk = "{{array}}";   
+							rk = rk.replace(regExp, "");
+							rk = rk.split(",");
+							$("#ranking").html("");
+							$("#ranking").append("<h2>RANK</h2><table id='rank_table'>");
+							$("#rank_table").append("<tr><th></th><th>Name</th><th>Score</th><th>time</th></tr>");
+							var tb="<tr>"
+							for(var i=1; i<=rk.length; i++){
+								if(i%3==1){
+									tb+="<td id='rktd'>"+(parseInt(i/3)+1)+"</td>";			
+								}
+								rk[i-1] = rk[i-1].replace(/39/,"").replace(/39$/,'');
+								tb+="<td id='rktd'>"+rk[i-1]+"</td>"
+								if(i%3==0){
+									tb+="</tr>";
+									$("#rank_table").append(tb);
+									tb="<tr>";
+								}
+							}
+							$("#rank_table").append("</table>");
+						});
+						
+						$("#credit_btn").click(function(){
+							$("#back").attr('style','display:');
+							event.preventDefault();
+							$("#join").attr('style', 'display:none;');
+							$("#menu").attr('style', 'display:none');
+							$("#credit").attr('style', 'display:');	
+						});
 
+						$("#info_btn").click(function(){
+							$("#body").attr('style','background:#BDBDBD;');
+							$("#back").attr('style','display:');
+							event.preventDefault();
+							$("#join").attr('style', 'display:none;');
+							$("#menu").attr('style', 'display:none');
+							$("#guide").attr('style', 'display:');	
+						});
+						$("#back").click(function(){
+							$("#body").attr('style','background='+'{{url_for('static', filename='test2.jpg')}}');
+							$("#back").attr('style','display:none');
+							$("#menu").attr('style','display:');
+							$("#play").attr('style','display:none');	
+							$("#guide").attr('style','display:none');	
+							$("#credit").attr('style','display:none');	
+							$("#ranking").attr('style','display:none');	
+						});
+					});
+		</script>
+		<link rel=stylesheet type=text/css href="https://www.w3schools.com/w3css/4/w3.css"/>
+		<link rel=stylesheet type=text/css href="{{url_for('static', filename='default.css')}}"/>
+		<link rel=stylesheet type=text/css href="{{url_for('static', filename='component1.css')}}"/>
+		<link rel=stylesheet type=text/css href="{{url_for('static', filename='set1.css')}}"/>	
+		<link rel=stylesheet type=text/css href="{{url_for('static', filename='button2.css')}}"/>
+		<link rel=stylesheet type=text/css href="{{url_for('static', filename='basic.css')}}"/>
+		<link rel=stylesheet type=text/css href="{{url_for('static', filename='slider.css')}}"/>
+		<script type="text/javascript" src="{{url_for('static', filename='jssor.slider-26.1.5.min.js')}}"></script>
+		<script type="text/javascript" src="{{url_for('static', filename='slider.js')}}"></script>
+	</head>
 
-</head>
-<!--<body style="margin: 0px; background: #0e0e0e;">-->
+	<body id="body" background="{{url_for('static', filename='test2.jpg')}}" >
+				<div id="back" style="position:absolute;top:1%;left:1%; z-index:10;  display:none;">
+					<img id="back" src="{{url_for('static', filename='back_btn.png')}}" height="5%" style="position:absolute;top:1%;left:1%;z-index:10;"/>
+				</div>
+				<table id="guide" width="100%" height="100%"  border ="0" align="center" style="position:absolute; top:0%; display:none;">
+					<tr>
+							<td>
+								<div id="w3-content w3-display-container" align="cneter">
+							       					
+							                <img class="mySlides" src="{{url_for('static', filename='img/guide_1.jpg')}}" style="width:100%; height:100%;"/>
+							                <img class="mySlides" src="{{url_for('static', filename='img/guide_2.jpg')}}" style="width:100%; height:100%;"/>
+							                <img class="mySlides" src="{{url_for('static', filename='img/guide_3.jpg')}}" style="width:100%; height:100%;"/>
+							                <img class="mySlides" src="{{url_for('static', filename='img/guide_4.jpg')}}" style="width:100%; height:100%;"/>
+							                <img class="mySlides" src="{{url_for('static', filename='img/guide_5.jpg')}}" style="width:100%; height:100%;"/>
+							                <img class="mySlides" src="{{url_for('static', filename='img/guide_6.jpg')}}" style="width:100%; height:100%;"/>
+							                <img class="mySlides" src="{{url_for('static', filename='img/guide_7.jpg')}}" style="width:100%; height:100%;"/>
+							                <img class="mySlides" src="{{url_for('static', filename='img/guide_8.jpg')}}" style="width:100%; height:100%;"/>
+							          		<button class="button w3-display-left" onclick="plusDivs(-1)" ><</button>
+											<button class="button w3-display-right" onclick="plusDivs(1)" >></button>
+							     </div>
+							</td>
+					</tr>
+				</table>
+				
+				<table id="ranking" width="100%" height="100%"  border ="10px" align="center" style="position:absolute; top:0%; display:none; z-index:9;" >
+					<tr>
+							<td>
+								
+							</td>
+					</tr>					
+				</table>
+				<table id="credit" width="100%" height="100%" align="center" style="position:absolute; top:0%; display:none; z-index:9;">
+					<tr>
+						<td>
+							<img src="{{url_for('static', filename='credit2.jpg')}}" align="center" style="max-width:100%; max-height:100%; z-index:9;"/>
+						</tr>
+					</tr>
+				</table>
+				<div id="play" width="100%" height="100%" >
+				<form id="join" align="center" class="join" width="100dp" style="margin:50 auto;">
+					<h1>Nickname</h1>
+					<input id='nickname' type="text" name="nickname" style="height:30px" placeholder="Please enter your Nickname.">			
+					<br><br><br><br>
+					<h1 id="connect">Continue</h1>
+					<input type="hidden" id='score' name="score" value="1">	
+				</form>
+				</div>
+	
+			<table id="menu" width ="100%" height="100%" cellspacing = "1dp" style="display:none; z-index:9;" >
+				<tr height="10%">
+					<td colspan="4" style="background-color:rgba(255,255,255,0.5);">
+					<div id="user" class="user"></div>
 
-<body id=body>
-
-<div id="display_div">
-	<form id="config_form">
-		<input type="text" id='nickname' name="nickname" value="">
-		<input type='submit' id='confirm_btn' value='Confirm' name='confirm_btn'>
-		<input type="hidden" id='score' name="score" value="1">
-		<br>
-		<input type='submit' id='score_btn' value='Score Driving' name='score_btn' style='visibility:hidden'>
-		<input type='submit' id='free_btn' value='Free Driving' name='free_btn' style='visibility:hidden'>
-		<input type='submit' id='rank_btn' value='Rank' name='rank_btn' style='visibility:hidden'>
-	</form>
-
-
-</div>
-
-
-</body>
+					</td>
+				</tr>
+				<tr hegiht="40%">
+					<td width="35%" rowspan="2" style="background-color:rgba(0,255,255,0.7)">
+							<div id="freemode" class="no-highlight hi-icon-wrap hi-icon-effect-1 hi-icon-effect-1a" align="center">
+							<h1>FREE DRIVE</h1>
+							<a class="hi-icon hi-icon-mobile">
+							<img src="{{url_for('static', filename='flag.png')}}" width="100%" align="center"/>
+							</a>
+							</div>
+					</td>
+					<td width="35%" rowspan="2"  style="background-color:rgba(255,0,0,0.7)">
+	
+							<div id="scoremode" class="no-highlight hi-icon-wrap hi-icon-effect-1 hi-icon-effect-1a" align="center">
+							<h1>SCORE DRIVE</h1>
+							<a class="hi-icon hi-icon-mobile">
+							<img src="{{url_for('static', filename='score.png')}}" width="100%" height="100%" align="center"/>
+							</a>
+							</div>
+					</td>
+					<td width="30%" colspan="2"  style="background-color:rgba(0,255,0,0.7)">
+							<div id="rank" class="no-highlight hi-icon-wrap hi-icon-effect-1 hi-icon-effect-1a" align="center">
+							<h1>RANK</h1>
+							<a class="hi-icon hi-icon-mobile">
+							<img src="{{url_for('static', filename='rank.png')}}" width="70%" height="70%" style="margin-left: 2px; margin-top:12px" />
+							</a>
+							</div>
+					</td>
+					<td>
+					</td>
+				</tr>
+				<tr hegiht="40%">
+					<td width="15%" style="background-color:rgba(255,187,0,0.7)">
+							<div id="info_btn" class="no-highlight hi-icon-wrap hi-icon-effect-1 hi-icon-effect-1a" align="center">
+							<h1>Info</h1>
+							<a class="hi-icon1 hi-icon-mobile">
+							<img src="{{url_for('static', filename='info3.png')}}" width="90%" height="95%" align="center"/>
+							</a>
+							</div>
+					</td>
+					<td width="15%" style="background-color:rgba(255,166,72,0.7)">
+							<div id="credit_btn" class="no-highlight hi-icon-wrap hi-icon-effect-1 hi-icon-effect-1a" align="center">
+							<h1>credit</h1>
+							<a class="hi-icon1 hi-icon-mobile">
+							<img src="{{url_for('static', filename='who.png')}}" width="100%" height="100%" align="center"/>
+							</a>
+							</div>
+					</td>
+				</tr>
+				<tr height="10%">
+					<td colspan="4" style="background-color:rgba(255,255,255,0.5);">
+					</td>
+				</tr>
+			</table>
+	</body>
 </html>
