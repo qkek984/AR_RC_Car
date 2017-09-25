@@ -14,7 +14,7 @@ import sqlite3
 
 global frame, bestContour, mdistance, r_ap,r_flag,minute,sec
 global render_text,tx
-global tspeed,mode
+global tspeed,start_btn
 global msg1,msg2
 global nickname,score
 global left,right,Line_Bit
@@ -24,7 +24,7 @@ speed=9
 ## init
 frame = bestContour = r_ap = tspeed = None
 mdistance=r_flag=minute=sec=tspeed=score=right=left=Line_Bit=0
-render_text=msg1=msg2=nickname=mode=""
+render_text=msg1=msg2=nickname=start_btn=""
 tx=0.45
 
 global time_score, stop_score, line_score, slow_score, red_score, cross_score
@@ -39,7 +39,7 @@ cross_score=10
 app = Flask(__name__)
 lock = thread.allocate_lock()
 WIDTH=320#320
-HEIGHT=288#280
+HEIGHT=288#288
 camera = PiCamera()
 camera.resolution = (WIDTH, HEIGHT)
 camera.framerate = 40
@@ -48,7 +48,7 @@ rawCapture = PiRGBArray(camera, size=(WIDTH, HEIGHT))
 
 lower_red = np.array([0,130,100])#Red
 upper_red = np.array([4,200,250])
-lower_blue = np.array([100,100,50])#blue
+lower_blue = np.array([100,80,50])#blue
 upper_blue = np.array([108,200,210])
 lower_yellow = np.array([24,140,140])#yellow
 upper_yellow = np.array([30,250,240])
@@ -62,41 +62,44 @@ upper_yblack = np.array([30,250,170])
 
 lower_rlight = np.array([165,50,200])#Red Light
 upper_rlight = np.array([175,220,255])
-lower_glight = np.array([60,200,200])#green Light
+lower_glight = np.array([60,180,190])#green Light
 upper_glight = np.array([70,255,255])
 
-lower_rrs = np.array([160,100,50])#red road sign
-upper_rrs = np.array([180,150,130])
+lower_rrs = np.array([155,10,50])#red road sign
+upper_rrs = np.array([180,150,255])
 '''Serials Class'''
 class Serials(threading.Thread):#Arduino Port Connection
     def __init__(self):
-        global mode
+        global start_btn
         threading.Thread.__init__(self)
         try:
             port="/dev/ttyUSB0"
             self.serialFromArduino = serial.Serial(port,9600)
             self.serialFromArduino.flushInput()
-            input = self.serialFromArduino.readline()
         except:
             try:
                 port="/dev/ttyUSB1"
                 self.serialFromArduino = serial.Serial(port,9600)
                 self.serialFromArduino.flushInput()
-                input = self.serialFromArduino.readline()
             except:
                 print "Arduino Port is Disconnected"
-                mode=False
+                start_btn=False
     def run(self):
-        global tspeed,mode
+        global tspeed,start_btn
         while True:
             speed=""
             input = self.serialFromArduino.readline()
+            #print str(input)
             len_input=len(input)
-            for i in range(0,len_input):
-                if i != len_input-3:
-                    speed=speed+str(input[i])
-                elif i != len_input-2:
-                    mode=str(input[i])
+            #test_code
+            ms = input.find('Esm')
+            ems = input.find('Em')
+            #print input[ms+3:ems]
+            Ebs = input.find('Ebs')
+            bs = input.find('Esm')
+            #print input[Ebs+3:bs]
+            speed=input[ms+3:ems]
+            start_btn=input[Ebs+3:bs]
             try:
                 tspeed=int(speed)
             except:
@@ -157,9 +160,9 @@ class Score(threading.Thread):
                 #print "slow_score:",slow_score
             elif r_flag==3:#Red light
                 while r_flag ==3 and red_score>0:
-                    print self.stack
+                    #print self.stack
                     self.stack=self.stack+1
-                    if self.stack>3 and tspeed>25:
+                    if self.stack>2 and tspeed>25:
                         red_score=0
                         msg1="Red Score"
                         msg2="-30"
@@ -178,7 +181,7 @@ class Score(threading.Thread):
 class Line_score(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
-        self.Line_Stack=3
+        self.Line_Stack=5
     def run(self):
         global Line_Bit,line_score, msg1, msg2,render_text
         while line_score>0:
@@ -189,13 +192,13 @@ class Line_score(threading.Thread):
                     if render_text=="Total Score":
                         time.sleep(100000)
                     line_score=line_score-5
-                    self.Line_Stack=3
+                    self.Line_Stack=5
                     for i in range(0,20):
                         msg1="Line Score"
                         msg2="-5"
                         time.sleep(0.1)
             elif Line_Bit==2:
-                self.Line_Stack=3
+                self.Line_Stack=5
             time.sleep(1)
             msg1=""
             msg2=""
@@ -205,13 +208,17 @@ class Counting(threading.Thread):
         threading.Thread.__init__(self)
         self.count=4
     def run(self):
-        global render_text,tx,mode,frame , time_score
+        global render_text,tx,start_btn,frame , time_score
         global minute,sec
         global msg1,msg2
-        while sec<50:#<---------------Delete in future
-        #while mode != "0":
+        while start_btn != "0":
             sec = sec+1
             time.sleep(0.1)
+            #print start_btn
+            if start_btn==False:# Arduino desconnected
+                time.sleep(5)
+                start_btn="0"
+            
         sec=0
         while render_text !=None:
             self.count= self.count-1
@@ -250,8 +257,8 @@ class Line_Detection(threading.Thread):
     def __init__(self):
         global WIDTH,HEIGHT
         threading.Thread.__init__(self)
-        self.verticesL = np.array([[(-WIDTH/3,HEIGHT),(WIDTH/2-WIDTH/3, HEIGHT/2-HEIGHT/4), (WIDTH/2, HEIGHT/2-HEIGHT/4), (WIDTH/6,HEIGHT)]], dtype=np.int32)
-        self.verticesR = np.array([[(WIDTH/2+WIDTH/3,HEIGHT),(WIDTH/2, HEIGHT/2-HEIGHT/4), (WIDTH/2+WIDTH/3, HEIGHT/2-HEIGHT/4), (WIDTH+WIDTH/3,HEIGHT)]], dtype=np.int32)
+        self.verticesL = np.array([[(-30,HEIGHT*0.8),(WIDTH*0.1, HEIGHT*0.3), (WIDTH*0.4, HEIGHT*0.3), (WIDTH*0.2,HEIGHT*0.8)]], dtype=np.int32)
+        self.verticesR = np.array([[(WIDTH*0.8,HEIGHT*0.8),(WIDTH*0.6, HEIGHT*0.3), (WIDTH*0.9, HEIGHT*0.3), (WIDTH+30,HEIGHT*0.8)]], dtype=np.int32)
     def region_of_interest2(self,img, verticesL, verticesR, color3=(255,255,255), color1=255):#ROI
         mask = np.zeros_like(img)
         if len(img.shape) > 2:
@@ -269,10 +276,12 @@ class Line_Detection(threading.Thread):
             for x1,y1,x2,y2 in line:
                 if h_width > x1 and RL==True:
                     left=1
-                    cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+                    #cv2.line(img, (x1, y1), (x2, y2), [255, 255, 255], 9)
+                    #cv2.line(img, (x1, y1), (x2, y2), color, thickness)
                 elif h_width < x1 and RL==False:
                     right=1
-                    cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+                    #cv2.line(img, (x1, y1), (x2, y2), [255, 255, 255], 9)
+                    #cv2.line(img, (x1, y1), (x2, y2), color, thickness)
     def run(self):
         global frame, Line_Bit, right, left
         temp = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # 흑백이미지로 변환
@@ -320,9 +329,7 @@ class Rgb_Detection(threading.Thread):
         return ROI_image
 
     def rgb_preprocessing(self,hsv,lower_rgb,upper_rgb,render_text_flag):# Trffic light rgb preprocessing
-        #Create a binary frame, where anything green appears white and everything else is black
         element = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
-        #Get rid of background noise using erosion and fill in the holes using dilation and erode the final frame on last time
         mask_rgb = cv2.inRange(hsv, lower_rgb, upper_rgb)
         if render_text_flag != 1:
             mask_rgb = cv2.dilate(mask_rgb,element,iterations=7)
@@ -401,14 +408,16 @@ class Rgb_Detection(threading.Thread):
     def run(self):
         global frame, mdistance,r_flag
         global lx,ly,lm
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        distance={"a":0,"b":0,"c":0,"d":0,"e":0,"f":100}
-        bestContour1,distance["a"] = self.rgb_preprocessing(hsv, lower_red, upper_red,0)
-        bestContour2,distance["b"] = self.rgb_preprocessing(hsv, lower_blue, upper_blue,0)
-        bestContour3,distance["c"] = self.rgb_preprocessing(hsv, lower_yellow, upper_yellow,0)
-        bestContour4,distance["d"] = self.rgb_preprocessing(hsv, lower_rlight, upper_rlight,0)
-        bestContour5,distance["e"] = self.rgb_preprocessing(hsv, lower_glight, upper_glight,0)
-        
+        try:
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            distance={"a":0,"b":0,"c":0,"d":0,"e":0,"f":100}
+            bestContour1,distance["a"] = self.rgb_preprocessing(hsv, lower_red, upper_red,0)
+            bestContour2,distance["b"] = self.rgb_preprocessing(hsv, lower_blue, upper_blue,0)
+            bestContour3,distance["c"] = self.rgb_preprocessing(hsv, lower_yellow, upper_yellow,0)
+            bestContour4,distance["d"] = self.rgb_preprocessing(hsv, lower_rlight, upper_rlight,0)
+            bestContour5,distance["e"] = self.rgb_preprocessing(hsv, lower_glight, upper_glight,0)
+        except:
+            pass
         mdistance = max(distance,key=distance.__getitem__)
         if mdistance == "a":
             self.Rendering_Data(bestContour1,mdistance)
@@ -580,31 +589,30 @@ def config():
     print score
     
 def gen():
-    MID = cv2.getRotationMatrix2D((WIDTH/2,HEIGHT/2),180,1)
     t0=Serials()
-    if mode != False:
+    if start_btn != False:
         t0.start()
         left=right=0
+    
     t1=Counting()
     t1.start()
     global frame, canny_img, bestContour, mdistance,r_ap,r_flag,minute,sec,score
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-        frame = frame.array
-        frame = cv2.warpAffine(frame,MID,(WIDTH,HEIGHT))# 180 rotation
-        if score==1:
-            t2=Rgb_Detection()
-            t3=Line_Detection()
-            #t4=threading.Thread(target = Rendering)
-            t2.daemon  = t3.daemon = True #= t4.daemon
-            t2.start()
-            t3.start()
-            #t4.start()
-            Rendering()
-        cv2.imwrite('data/f.jpg', frame)
-        yield (b'--frame\r\n'
-               b'Content-Type: frame/jpeg\r\n\r\n' + open('data/f.jpg', 'rb').read() + b'\r\n')
-        rawCapture.truncate(0)
-        
+        try:
+            frame = frame.array
+            if score==1:
+                t2=Rgb_Detection()
+                t3=Line_Detection()
+                t2.daemon  = t3.daemon = True
+                t2.start()
+                t3.start()
+                Rendering()
+            cv2.imwrite('data/f.jpg', frame)
+            yield (b'--frame\r\n'
+                   b'Content-Type: frame/jpeg\r\n\r\n' + open('data/f.jpg', 'rb').read() + b'\r\n')
+            rawCapture.truncate(0)
+        except:
+            pass
 @app.route('/video_feed')
 def video_feed():
     """Video streaming route. Put this in the src attribute of an img tag."""
