@@ -19,11 +19,13 @@ global msg1,msg2
 global nickname,score
 global left,right,Line_Bit
 global speed## delete in future
+global limitPixel
+
 speed=9 
 
 ## init
 frame = bestContour = r_ap = tspeed = None
-mdistance=r_flag=minute=sec=tspeed=score=right=left=Line_Bit=0
+mdistance=r_flag=minute=sec=tspeed=score=right=left=Line_Bit=limitPixel=0
 render_text=msg1=msg2=nickname=start_btn=""
 tx=0.45
 
@@ -43,7 +45,7 @@ HEIGHT=288#288
 camera = PiCamera()
 camera.resolution = (WIDTH, HEIGHT)
 camera.framerate = 40
-camera.brightness = 57
+camera.brightness = 55
 rawCapture = PiRGBArray(camera, size=(WIDTH, HEIGHT))
 
 lower_red = np.array([0,130,100])#Red
@@ -61,12 +63,12 @@ lower_yblack = np.array([10,150,50])#yellow black
 upper_yblack = np.array([30,250,170])
 
 lower_rlight = np.array([165,50,200])#Red Light
-upper_rlight = np.array([175,220,255])
-lower_glight = np.array([60,180,190])#green Light
+upper_rlight = np.array([173,220,255])
+lower_glight = np.array([50,120,140])#green Light
 upper_glight = np.array([70,255,255])
 
 lower_rrs = np.array([155,10,50])#red road sign
-upper_rrs = np.array([180,150,255])
+upper_rrs = np.array([180,170,255])
 '''Serials Class'''
 class Serials(threading.Thread):#Arduino Port Connection
     def __init__(self):
@@ -84,6 +86,7 @@ class Serials(threading.Thread):#Arduino Port Connection
             except:
                 print "Arduino Port is Disconnected"
                 start_btn=False
+        #start_btn="0"
     def run(self):
         global tspeed,start_btn
         while True:
@@ -125,7 +128,7 @@ class Score(threading.Thread):
         conn.close()
     def run(self):
         global time_score, time_score, line_score,slow_score,red_score, total_score, cross_score
-        global render_text
+        global render_text,limitPixel
         global tspeed, r_flag
         global msg1,msg2
         global nickname,minute,sec
@@ -145,28 +148,46 @@ class Score(threading.Thread):
                         render_text="Total Score"
                     time.sleep(1)
                 self.stack=0
-            elif r_flag==2:#SLow 
+            elif r_flag==2:#SLow
                 while r_flag ==2 and slow_score>0:
-                    self.stack=self.stack+1
-                    while self.stack>3 and self.stack<7 and slow_score>0:
-                        if tspeed>200:
+                    if self.stack>2 and limitPixel>500:
+                        self.stack=0
+                        if tspeed>230:
                             slow_score=0
-                            msg1="Slow Score"
-                            msg2="-10"
-                        self.stack=self.stack+1
-                    time.sleep(1)
+                            self.stack=0
+                            while self.stack<4:#msg printing
+                                msg1="Slow Score"
+                                msg2="-10"
+                                self.stack=self.stack+1
+                                time.sleep(0.5)
+                    self.stack=self.stack+1
+                    time.sleep(0.5)
                 self.stack=0
                 self.check2=1
-                #print "slow_score:",slow_score
+                print "slow_score:",slow_score
             elif r_flag==3:#Red light
                 while r_flag ==3 and red_score>0:
+                    if self.stack>1:
+                        self.stack=0
+                        if tspeed>50:
+                            red_score=0
+                            self.stack=0
+                            while self.stack<4:#msg printing
+                                msg1="Red Score"
+                                msg2="-30"
+                                self.stack=self.stack+1
+                                time.sleep(0.5)
+                    self.stack=self.stack+1
+                    time.sleep(0.5)
+                    '''
                     #print self.stack
                     self.stack=self.stack+1
-                    if self.stack>2 and tspeed>25:
+                    if self.stack>2 and tspeed>100:
                         red_score=0
                         msg1="Red Score"
                         msg2="-30"
                     time.sleep(1)
+                    '''
                 self.stack=0
                 self.check3=1
                 #print "Red Light_Score:",red_score
@@ -391,6 +412,7 @@ class Rgb_Detection(threading.Thread):
                 r_ap="Slow Down"
         elif mdistance=="d":
             _,t = self.rgb_preprocessing(hsv, lower_rrs, upper_rrs,1)
+            
             if t>2000:
                 lx=x
                 ly=y
@@ -407,7 +429,7 @@ class Rgb_Detection(threading.Thread):
             r_flag=0
     def run(self):
         global frame, mdistance,r_flag
-        global lx,ly,lm
+        global lx,ly,lm,limitPixel
         try:
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             distance={"a":0,"b":0,"c":0,"d":0,"e":0,"f":100}
@@ -420,17 +442,23 @@ class Rgb_Detection(threading.Thread):
             pass
         mdistance = max(distance,key=distance.__getitem__)
         if mdistance == "a":
+            limitPixel = 0
             self.Rendering_Data(bestContour1,mdistance)
         elif mdistance == "b":
+            limitPixel = 0
             self.Rendering_Data(bestContour2,mdistance)
         elif mdistance == "c":
+            limitPixel = distance["c"]
+            print limitPixel
             self.Rendering_Data(bestContour3,mdistance)
         elif mdistance == "d":
+            limitPixel = 0
             self.Rendering_Data(bestContour4,mdistance)
         elif mdistance == "e":
+            limitPixel = 0
             self.Rendering_Data(bestContour5,mdistance)
         else:
-            r_flag=0
+            limitPixel = r_flag=0
 '''Rendering Method'''
 def Rendering():
     global frame, tx,minute,sec,r_flag
@@ -590,6 +618,7 @@ def config():
     
 def gen():
     t0=Serials()
+    #start_btn="0"
     if start_btn != False:
         t0.start()
         left=right=0
