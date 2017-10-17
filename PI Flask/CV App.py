@@ -238,6 +238,7 @@ class Counting(threading.Thread):
             #print start_btn
             if start_btn==False:# Arduino desconnected
                 time.sleep(5)
+                print "Arduino desconnected, Compulsion Start"
                 start_btn="0"
             
         sec=0
@@ -278,8 +279,8 @@ class Line_Detection(threading.Thread):
     def __init__(self):
         global WIDTH,HEIGHT
         threading.Thread.__init__(self)
-        self.verticesL = np.array([[(-30,HEIGHT*0.8),(WIDTH*0.1, HEIGHT*0.3), (WIDTH*0.4, HEIGHT*0.3), (WIDTH*0.2,HEIGHT*0.8)]], dtype=np.int32)
-        self.verticesR = np.array([[(WIDTH*0.8,HEIGHT*0.8),(WIDTH*0.6, HEIGHT*0.3), (WIDTH*0.9, HEIGHT*0.3), (WIDTH+30,HEIGHT*0.8)]], dtype=np.int32)
+        self.verticesL = np.array([[(-60,HEIGHT*0.7),(WIDTH*0.15, HEIGHT*0.3), (WIDTH*0.5, HEIGHT*0.3), (WIDTH*0.15,HEIGHT*0.7)]], dtype=np.int32)
+        self.verticesR = np.array([[(WIDTH*0.8,HEIGHT*0.7),(WIDTH*0.5, HEIGHT*0.3), (WIDTH*0.85, HEIGHT*0.3), (WIDTH+60,HEIGHT*0.7)]], dtype=np.int32)
     def region_of_interest2(self,img, verticesL, verticesR, color3=(255,255,255), color1=255):#ROI
         mask = np.zeros_like(img)
         if len(img.shape) > 2:
