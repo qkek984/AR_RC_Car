@@ -169,12 +169,12 @@ class Score(threading.Thread):
                 while r_flag ==3 and red_score>0:
                     if self.stack>1:
                         self.stack=0
-                        if tspeed>50:
+                        if tspeed>230:
                             red_score=0
                             self.stack=0
                             while self.stack<4:#msg printing
                                 msg1="Red Score"
-                                msg2="-30"
+                                msg2="-20"
                                 self.stack=self.stack+1
                                 time.sleep(0.5)
                     self.stack=self.stack+1
@@ -450,7 +450,7 @@ class Rgb_Detection(threading.Thread):
             self.Rendering_Data(bestContour2,mdistance)
         elif mdistance == "c":
             limitPixel = distance["c"]
-            print limitPixel
+            #print limitPixel
             self.Rendering_Data(bestContour3,mdistance)
         elif mdistance == "d":
             limitPixel = 0
