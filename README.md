@@ -18,24 +18,24 @@
 게 주행이 가능
 
 ## 2.설계
-> 2.1 전체 설계도
+> ### 2.1 전체 설계도
   >> <img src="https://github.com/qkek984/AR_RC_Car/blob/master/readme_Img/total_design.png?raw=true" width="70%" height="70%">
 
-> 2.2 RC카 설계도
+> ###2.2 RC카 설계도
   >> <img src="https://github.com/qkek984/AR_RC_Car/blob/master/readme_Img/arduino_design.png?raw=true" width="80%" height="80%">
   
   >> <img src="https://github.com/qkek984/AR_RC_Car/blob/master/readme_Img/arduino_design2.png?raw=true" width="80%" height="80%">
 
 ## 4.특징
-> 4.1. Computer Vision
+> ###4.1. Computer Vision
   * 표지판&신호등 Object detection
 >><img src="https://github.com/qkek984/AR_RC_Car/blob/master/readme_Img/run.png?raw=true" width="80%" height="80%">
 
-> 4.2. Line detection
+> ###4.2. Line detection
   * using slope filtering, ROI and so on..
 >><img src="https://github.com/qkek984/AR_RC_Car/blob/master/readme_Img/line.PNG?raw=true" width="80%" height="80%">
 
-> 4.3. Score game Algorithm
+> ###4.3. Score game Algorithm
   * 주행 기록에 따른 스코어 평가
 >><img src="https://github.com/qkek984/AR_RC_Car/blob/master/readme_Img/resultScreen.JPG?raw=true" width="80%" height="80%">
 
