@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    android:id="@+id/parent"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.b100.rynamic_alpha.FullscreenActivity">
+
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/test2" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_marginTop="15dp"
+            android:layout_gravity="center"
+            android:text="Address"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:textColor="@android:color/white"
+            android:textSize="12pt"
+            />
+        <EditText
+            android:textAlignment="center"
+            android:hint="192.168.XXX.XXX"
+            android:textSize="10pt"
+            android:id="@+id/address"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textColor="#D5D5D5"/>
+        <TextView
+            android:layout_gravity="center"
+            android:text="PORT"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:textColor="@android:color/white"
+            android:textSize="12pt"
+            />
+        <EditText
+            android:textAlignment="center"
+            android:textSize="10pt"
+            android:hint="5001"
+            android:id="@+id/port"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textColor="#D5D5D5"/>
+
+        <Button
+            android:layout_marginTop="30dp"
+            android:background="@android:color/transparent"
+            android:id="@+id/join"
+            android:layout_gravity="center"
+            android:text="JOIN"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="17pt"
+            android:textColor="#D5D5D5"
+            android:shadowColor="#3669CF"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="10.0"
+            />
+
+    </LinearLayout>
+
+
+</FrameLayout>
