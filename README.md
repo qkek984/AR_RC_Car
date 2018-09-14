@@ -28,7 +28,7 @@
 
 ## 4.Core technology
 > ### 4.1. Computer Vision
-  * road sing & traffic light object detection
+  * road sign & traffic light object detection
 >><img src="https://github.com/qkek984/AR_RC_Car/blob/master/readme_Img/run.png?raw=true" width="80%" height="80%">
 
 > ### 4.2. Line detection
