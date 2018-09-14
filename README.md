@@ -2,4 +2,5 @@
 
 <hr/>
 시연 영상 
-<iframe class="youtube" src="https://youtu.be/IAszPYRVv5c" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+[![AR RC Car](http://www.hanium.or.kr/upload/20171206125336310_10_%EB%8F%99%EC%83%81.png){: width="100" height="100"}](https://youtu.be/IAszPYRVv5c) 
